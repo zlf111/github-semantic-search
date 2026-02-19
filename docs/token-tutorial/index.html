@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Token 申请教程 — GitHub Issue 语义搜索工具</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #e6edf3; --text-muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --yellow: #d29922; --red: #f85149;
+    --code-bg: #1c2129;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+    max-width: 860px; margin: 0 auto; padding: 40px 24px 80px;
+  }
+  h1 { font-size: 2rem; margin-bottom: 8px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 40px; }
+
+  /* Step card */
+  .step {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 28px 24px; margin-bottom: 32px;
+    position: relative;
+  }
+  .step-number {
+    position: absolute; top: -16px; left: 24px;
+    background: var(--accent); color: #fff; font-weight: 700;
+    font-size: 0.85rem; padding: 2px 14px; border-radius: 20px;
+  }
+  .step h2 { font-size: 1.25rem; margin-bottom: 12px; margin-top: 4px; }
+  .step p, .step li { color: var(--text); font-size: 0.93rem; }
+  .step ul, .step ol { padding-left: 1.4em; margin: 8px 0; }
+  .step li { margin-bottom: 4px; }
+
+  /* Screenshot */
+  .screenshot {
+    margin: 16px 0; border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; background: #fff;
+  }
+  .screenshot img { width: 100%; display: block; }
+  .screenshot-caption {
+    background: var(--code-bg); color: var(--text-muted);
+    font-size: 0.8rem; padding: 6px 12px; border-top: 1px solid var(--border);
+  }
+
+  /* Inline screenshot (smaller, e.g. dialog) */
+  .screenshot.inline { max-width: 380px; margin: 16px auto; }
+
+  /* Code */
+  code {
+    background: var(--code-bg); color: var(--accent);
+    padding: 2px 6px; border-radius: 4px; font-size: 0.88em;
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 18px; margin: 12px 0;
+    overflow-x: auto; font-size: 0.88rem; line-height: 1.6;
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+    color: var(--text);
+  }
+
+  /* Callout boxes */
+  .callout {
+    border-left: 4px solid; border-radius: 6px;
+    padding: 12px 16px; margin: 16px 0; font-size: 0.9rem;
+  }
+  .callout.warning { border-color: var(--yellow); background: rgba(210,153,34,0.08); }
+  .callout.success { border-color: var(--green); background: rgba(63,185,80,0.08); }
+  .callout.danger  { border-color: var(--red); background: rgba(248,81,73,0.08); }
+  .callout strong { display: block; margin-bottom: 4px; }
+  .callout.warning strong { color: var(--yellow); }
+  .callout.success strong { color: var(--green); }
+  .callout.danger strong  { color: var(--red); }
+
+  /* Table */
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    font-size: 0.9rem;
+  }
+  th, td {
+    padding: 10px 14px; border: 1px solid var(--border); text-align: left;
+  }
+  th { background: var(--code-bg); color: var(--accent); font-weight: 600; }
+  td { color: var(--text); }
+
+  /* Summary header */
+  .summary-header {
+    display: flex; gap: 24px; flex-wrap: wrap; margin: 16px 0;
+  }
+  .summary-card {
+    flex: 1; min-width: 160px; background: var(--code-bg);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; text-align: center;
+  }
+  .summary-card .value {
+    font-size: 1.8rem; font-weight: 700; color: var(--green);
+  }
+  .summary-card .label { color: var(--text-muted); font-size: 0.82rem; margin-top: 4px; }
+
+  /* Arrow between steps */
+  .step-arrow {
+    text-align: center; color: var(--text-muted); font-size: 1.5rem;
+    margin: -12px 0 -8px; opacity: 0.4;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .muted { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<h1><span>GitHub Token</span> 申请教程</h1>
+<p class="subtitle">
+  为 GitHub Issue 语义搜索工具配置 Personal Access Token，提升 API 配额 —
+  全程 5 步，约 2 分钟完成
+</p>
+
+<div class="summary-header">
+  <div class="summary-card">
+    <div class="value">5</div>
+    <div class="label">操作步骤</div>
+  </div>
+  <div class="summary-card">
+    <div class="value">~2 min</div>
+    <div class="label">预计耗时</div>
+  </div>
+  <div class="summary-card">
+    <div class="value">0</div>
+    <div class="label">所需权限</div>
+  </div>
+  <div class="summary-card">
+    <div class="value">83x</div>
+    <div class="label">REST API 提升</div>
+  </div>
+</div>
+
+<!-- ==================== STEP 1 ==================== -->
+<div class="step">
+  <div class="step-number">Step 1</div>
+  <h2>打开 GitHub Token 设置页面</h2>
+  <p>在浏览器中访问：</p>
+  <pre>https://github.com/settings/tokens</pre>
+  <p>如果尚未登录 GitHub，会跳转到登录页面，请先完成登录。</p>
+  <p>登录后你会看到 <strong>Personal access tokens</strong> 页面。在左侧栏中，点击
+    <strong>Personal access tokens</strong> 展开子菜单，然后选择 <strong>Tokens (classic)</strong>。</p>
+
+  <div class="screenshot">
+    <img src="step1-tokens-page.png" alt="Tokens (classic) 页面">
+    <div class="screenshot-caption">Personal access tokens (classic) 页面 — 左侧选中 Tokens (classic)</div>
+  </div>
+</div>
+
+<div class="step-arrow">&#8595;</div>
+
+<!-- ==================== STEP 2 ==================== -->
+<div class="step">
+  <div class="step-number">Step 2</div>
+  <h2>创建新的 Classic Token</h2>
+  <p>点击页面中间的 <strong>"Generate new token"</strong> 下拉按钮，选择
+    <strong>"Generate new token (classic)"</strong>。</p>
+
+  <div class="screenshot">
+    <img src="step2a-dropdown.png" alt="下拉菜单">
+    <div class="screenshot-caption">下拉菜单中选择 "Generate new token (classic)" — 注意不要选 fine-grained</div>
+  </div>
+
+  <p>GitHub 会要求你重新输入密码以确认身份（sudo 模式）。输入密码后点击 <strong>Confirm</strong>。</p>
+
+  <div class="screenshot inline">
+    <img src="step2b-confirm.png" alt="密码确认">
+    <div class="screenshot-caption">输入账户密码确认身份</div>
+  </div>
+</div>
+
+<div class="step-arrow">&#8595;</div>
+
+<!-- ==================== STEP 3 ==================== -->
+<div class="step">
+  <div class="step-number">Step 3</div>
+  <h2>填写 Token 配置</h2>
+  <p>进入配置页面后，按以下方式填写：</p>
+
+  <ol>
+    <li>
+      <strong>Note（备注）</strong>：填写一个描述性名称，例如：<code>GitHub Issue Search Tool</code>
+    </li>
+    <li>
+      <strong>Expiration（过期时间）</strong>：建议选择 <code>90 days</code> 或
+      <code>No expiration</code>。默认的 30 天太短，需要频繁续期。
+    </li>
+    <li>
+      <strong>Select scopes（权限范围）</strong>：<span style="color:var(--green);font-weight:700">不要勾选任何复选框！</span>
+      所有 scope 保持为空。
+    </li>
+  </ol>
+
+  <div class="callout success">
+    <strong>为什么不需要任何权限？</strong>
+    我们的工具只需要搜索和读取<em>公开仓库</em>的 issue。不勾选任何权限的 token 已经足够
+    将 API 配额从「匿名」级别提升到「认证用户」级别。这是最小权限原则 — 不要授予不需要的权限。
+  </div>
+
+  <div class="screenshot">
+    <img src="step3a-config-top.png" alt="配置页面 - 初始状态">
+    <div class="screenshot-caption">刚进入的配置页面 — Note 和 Expiration 需要填写，Scopes 全部为空</div>
+  </div>
+
+  <p>填写完成后的效果：</p>
+
+  <div class="screenshot">
+    <img src="step3b-config-filled.png" alt="配置页面 - 填写完成">
+    <div class="screenshot-caption">填写完成 — Note 已填写，Expiration 设为 No expiration，所有 Scopes 未勾选</div>
+  </div>
+
+  <div class="callout warning">
+    <strong>注意 GitHub 的安全提醒</strong>
+    选择 "No expiration" 后，GitHub 会显示黄色警告建议设置过期时间。对于仅用于搜索公开 issue 的零权限 token，
+    这个风险是可接受的。如果你更在意安全性，可以选择 90 天并在到期后重新生成。
+  </div>
+</div>
+
+<div class="step-arrow">&#8595;</div>
+
+<!-- ==================== STEP 4 ==================== -->
+<div class="step">
+  <div class="step-number">Step 4</div>
+  <h2>生成并复制 Token</h2>
+  <p>向下滚动页面，确认所有 scope 复选框都未勾选，然后点击底部绿色的 <strong>"Generate token"</strong> 按钮。</p>
+
+  <div class="screenshot">
+    <img src="step4a-scopes-bottom.png" alt="页面底部 - Generate token 按钮">
+    <div class="screenshot-caption">所有权限都未勾选，点击绿色 "Generate token" 按钮</div>
+  </div>
+
+  <p>生成成功后，页面会显示你的 token（以 <code>ghp_</code> 开头的字符串）。</p>
+
+  <div class="callout danger">
+    <strong>Token 只会显示一次！</strong>
+    离开这个页面后，你将无法再看到完整的 token。请立即点击 token 旁边的复制图标，
+    将其保存到安全的地方（如密码管理器）。
+  </div>
+
+  <div class="screenshot">
+    <img src="step4b-token-created.png" alt="Token 生成成功">
+    <div class="screenshot-caption">Token 已生成 — 点击复制图标保存到剪贴板（token 已打码处理）</div>
+  </div>
+</div>
+
+<div class="step-arrow">&#8595;</div>
+
+<!-- ==================== STEP 5 ==================== -->
+<div class="step">
+  <div class="step-number">Step 5</div>
+  <h2>配置环境变量</h2>
+  <p>将 token 设置为环境变量，让搜索工具能够自动使用它。</p>
+
+  <h3 style="margin:16px 0 8px;font-size:1rem;color:var(--accent)">临时设置（当前终端会话有效）</h3>
+
+  <p><strong>Windows PowerShell：</strong></p>
+  <pre>$env:GITHUB_TOKEN = 'ghp_你的token'</pre>
+
+  <p><strong>Linux / macOS：</strong></p>
+  <pre>export GITHUB_TOKEN=ghp_你的token</pre>
+
+  <h3 style="margin:16px 0 8px;font-size:1rem;color:var(--accent)">永久设置（推荐）</h3>
+
+  <p><strong>Windows</strong> — 添加到 PowerShell 配置文件：</p>
+  <pre># 打开配置文件（如果不存在会自动创建）
+notepad $PROFILE
+
+# 在文件中添加以下行：
+$env:GITHUB_TOKEN = 'ghp_你的token'</pre>
+
+  <p><strong>Linux / macOS</strong> — 添加到 <code>~/.bashrc</code> 或 <code>~/.zshrc</code>：</p>
+  <pre>echo 'export GITHUB_TOKEN=ghp_你的token' >> ~/.bashrc
+source ~/.bashrc</pre>
+
+  <h3 style="margin:16px 0 8px;font-size:1rem;color:var(--accent)">验证配置</h3>
+  <p>运行以下命令确认 token 生效：</p>
+  <pre># Windows PowerShell
+python -c "import urllib.request,json,os; req=urllib.request.Request('https://api.github.com/rate_limit',headers={'Authorization':'token '+os.environ['GITHUB_TOKEN'],'User-Agent':'test'}); resp=urllib.request.urlopen(req); d=json.loads(resp.read()); print('REST API:',d['resources']['core']['limit'],'req/hour'); print('Search API:',d['resources']['search']['limit'],'req/min')"</pre>
+
+  <p>预期输出：</p>
+  <pre>REST API: 5000 req/hour
+Search API: 30 req/min</pre>
+
+  <div class="callout success">
+    <strong>配置成功！</strong>
+    如果你看到 REST API 为 5000、Search API 为 30，说明 token 已正确配置。
+    搜索工具会自动检测 <code>GITHUB_TOKEN</code> 环境变量并使用它。
+  </div>
+</div>
+
+<!-- ==================== SUMMARY ==================== -->
+<div class="step" style="border-color:var(--accent);border-width:2px;">
+  <h2 style="color:var(--accent)">配额对比</h2>
+  <p>配置 Token 前后的 API 配额对比：</p>
+  <table>
+    <tr><th>API</th><th>无 Token</th><th>有 Token</th><th>提升倍数</th></tr>
+    <tr><td>Search API</td><td>10 次/分钟</td><td style="color:var(--green);font-weight:700">30 次/分钟</td><td>3x</td></tr>
+    <tr><td>REST API</td><td>60 次/小时</td><td style="color:var(--green);font-weight:700">5,000 次/小时</td><td>83x</td></tr>
+  </table>
+  <p class="muted" style="margin-top:12px;font-size:0.85rem">
+    对于搜索工具的典型使用场景（13 条查询 + 14 条评论获取），无 Token 需要约 82 秒（含等待），
+    有 Token 只需约 30 秒，且不会触发限流。
+  </p>
+</div>
+
+<div class="step" style="margin-top:32px;background:transparent;border:1px dashed var(--border);">
+  <h2>常见问题</h2>
+  <p><strong>Q: Token 过期了怎么办？</strong></p>
+  <p style="margin-bottom:12px">回到 <a href="https://github.com/settings/tokens">Token 设置页面</a>，点击 token 名称进入详情，
+    选择 "Regenerate token" 即可生成新的 token。新 token 需要重新配置环境变量。</p>
+
+  <p><strong>Q: Token 不小心泄露了怎么办？</strong></p>
+  <p style="margin-bottom:12px">立即在 <a href="https://github.com/settings/tokens">Token 设置页面</a>
+    点击 "Delete" 删除泄露的 token，然后重新生成一个新的。
+    由于我们的 token 没有任何权限，泄露的风险很低（只能用来读取公开数据），但仍建议立即更换。</p>
+
+  <p><strong>Q: 可以在 Cursor 的 .env 文件中设置吗？</strong></p>
+  <p>可以，但我们的脚本从系统环境变量读取，建议使用上面 Step 5 的方式。
+    如果你使用 dotenv，确保 <code>.env</code> 文件已在 <code>.gitignore</code> 中以避免泄露。</p>
+</div>
+
+<p class="muted" style="text-align:center;margin-top:40px;font-size:0.82rem">
+  GitHub Issue 语义搜索工具 — Token 申请教程 v1.0 | 截图拍摄于 2026-02-08
+</p>
+
+</body>
+</html>

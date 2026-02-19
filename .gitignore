@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.search_cache.json
+search_config.json
+*_results.md
+intermediate.json
+ai_overrides.json
+cross_ref_graph.png
+*.egg-info/
+.env

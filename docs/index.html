@@ -1,0 +1,2663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Semantic Search v6 &mdash; Developer Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ===== Design Tokens ===== */
+:root{--bg:#0d1117;--bg-card:#161b22;--bg-code:#1c2128;--border:#30363d;
+--text:#e6edf3;--text-dim:#8b949e;--text-bright:#f0f6fc;--accent:#58a6ff;
+--accent-dim:#1f6feb;--green:#3fb950;--orange:#d29922;--red:#f85149;
+--purple:#bc8cff;--cyan:#39d2c0;
+--font-body:'Noto Sans SC',system-ui,sans-serif;
+--font-mono:'JetBrains Mono',monospace;
+--font-display:'Playfair Display',serif;
+--radius:8px;--shadow:0 2px 12px rgba(0,0,0,0.4)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);
+font-size:15px;line-height:1.7;overflow-x:hidden}
+::selection{background:var(--accent-dim);color:#fff}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+
+/* ===== Nav (sidebar) ===== */
+nav{position:fixed;top:0;left:0;width:260px;height:100vh;background:var(--bg-card);
+border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:24px 16px;font-size:13px;
+transition:transform .3s}
+nav h2{font-family:var(--font-display);font-size:18px;color:var(--accent);margin-bottom:20px}
+nav ul{list-style:none}nav li{margin-bottom:2px}
+nav a{display:block;padding:6px 10px;border-radius:6px;color:var(--text-dim);transition:all .15s}
+nav a:hover,nav a.active{background:rgba(88,166,255,.1);color:var(--accent);text-decoration:none}
+nav .sl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);
+margin:16px 0 6px 10px;font-weight:600}
+
+/* ===== Mobile hamburger ===== */
+.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--bg-card);
+border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--text)}
+.hamburger svg{display:block}
+.nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+
+/* ===== Main content ===== */
+main{margin-left:260px;max-width:960px;padding:48px 48px 120px}
+.hero{padding:60px 0 40px;border-bottom:1px solid var(--border);margin-bottom:48px}
+.hero h1{font-family:var(--font-display);font-size:42px;color:var(--text-bright);line-height:1.2;margin-bottom:12px}
+.hero .sub{font-size:17px;color:var(--text-dim);font-weight:300}
+.badges{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:5px;background:var(--bg-code);border:1px solid var(--border);
+padding:4px 12px;border-radius:20px;font-size:12px;font-family:var(--font-mono);color:var(--text-dim)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.g{background:var(--green)}.dot.b{background:var(--accent)}.dot.o{background:var(--orange)}
+
+/* ===== Sections ===== */
+section{margin-bottom:64px;scroll-margin-top:24px}
+h2{font-family:var(--font-display);font-size:28px;color:var(--text-bright);
+margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--accent-dim)}
+h3{font-size:18px;color:var(--text-bright);margin:24px 0 10px}
+h4{font-size:15px;color:var(--cyan);margin:16px 0 8px;font-family:var(--font-mono)}
+p{margin-bottom:12px}ul{margin:8px 0 16px 20px}li{margin-bottom:4px}
+
+/* ===== Code ===== */
+code{font-family:var(--font-mono);font-size:13px;background:var(--bg-code);padding:2px 6px;border-radius:4px}
+pre{background:var(--bg-code);border:1px solid var(--border);border-radius:var(--radius);
+padding:16px 20px;overflow-x:auto;margin:12px 0 20px;font-size:13px;line-height:1.6;position:relative}
+pre code{background:none;padding:0}
+.kw{color:var(--purple)}.str{color:var(--green)}.num{color:var(--orange)}
+.cmt{color:var(--text-dim);font-style:italic}.fn{color:var(--cyan)}
+
+/* ===== Copy button ===== */
+.copy-btn{position:absolute;top:8px;right:8px;background:var(--bg-card);border:1px solid var(--border);
+border-radius:6px;color:var(--text-dim);font-size:11px;padding:4px 10px;cursor:pointer;
+font-family:var(--font-mono);transition:all .2s;opacity:0}
+pre:hover .copy-btn{opacity:1}
+.copy-btn:hover{color:var(--accent);border-color:var(--accent)}
+.copy-btn.copied{color:var(--green);border-color:var(--green)}
+
+/* ===== Cards ===== */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:24px;margin:16px 0;box-shadow:var(--shadow)}
+.card-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ===== Details / Collapsible ===== */
+details{margin:12px 0}
+summary{cursor:pointer;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border);
+border-radius:var(--radius);font-weight:600;color:var(--text-bright);user-select:none;
+transition:background .15s;display:flex;align-items:center;gap:8px}
+summary:hover{background:rgba(88,166,255,.05)}
+summary::before{content:"\25B8";font-size:12px;transition:transform .2s;display:inline-block}
+details[open] summary::before{transform:rotate(90deg)}
+details[open] summary{border-radius:var(--radius) var(--radius) 0 0}
+.db{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);
+padding:20px;background:var(--bg-card)}
+
+/* ===== Tabs ===== */
+.tabs{display:flex;gap:0;margin-bottom:-1px;position:relative;z-index:1}
+.tab{padding:8px 18px;border:1px solid transparent;border-bottom:none;
+border-radius:var(--radius) var(--radius) 0 0;cursor:pointer;font-size:13px;
+font-family:var(--font-mono);color:var(--text-dim);background:transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--bg-code);border-color:var(--border);color:var(--accent);font-weight:600}
+.tc{display:none;border:1px solid var(--border);border-radius:0 var(--radius) var(--radius) var(--radius);
+background:var(--bg-code);padding:16px 20px}
+.tc.active{display:block}
+
+/* ===== Tables ===== */
+table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--border)}
+th{color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+
+/* ===== Flow diagram ===== */
+.dc{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+padding:32px;margin:20px 0;overflow-x:auto}
+.fd{display:flex;align-items:center;gap:8px;width:fit-content;margin:0 auto}
+.fb{padding:10px 12px;border-radius:var(--radius);text-align:center;font-size:12px;font-weight:600;min-width:90px;white-space:nowrap}
+.fb small{display:block;font-weight:300;font-size:10px;margin-top:3px;color:rgba(255,255,255,.7);white-space:normal}
+.fb-c{background:var(--accent-dim);color:#fff;border:2px solid var(--accent)}
+.fb-s{background:#1a3a2a;color:var(--green);border:2px solid var(--green)}
+.fb-r{background:#3a2a1a;color:var(--orange);border:2px solid var(--orange)}
+.fb-o{background:#2a1a3a;color:var(--purple);border:2px solid var(--purple)}
+.fb-k{background:#1a2a3a;color:var(--cyan);border:2px solid var(--cyan)}
+.fa{color:var(--text-dim);font-size:20px;flex-shrink:0}
+
+/* ===== Calculator ===== */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.ci label{display:block;font-size:13px;color:var(--text-dim);margin-bottom:4px}
+.ci input,.ci select,.ci textarea{width:100%;padding:8px 12px;background:var(--bg-code);border:1px solid var(--border);
+border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:13px}
+.ci textarea{resize:vertical;line-height:1.5}
+.cr{background:var(--bg-code);border:2px solid var(--accent-dim);border-radius:var(--radius);
+padding:20px;text-align:center;margin-top:16px}
+.cr .sc{font-size:48px;font-weight:700;font-family:var(--font-display)}
+.cr .sc.high{color:var(--green)}.cr .sc.medium{color:var(--orange)}.cr .sc.low{color:var(--red)}
+.cbd{text-align:left;margin-top:12px;font-size:13px;font-family:var(--font-mono)}
+.cbd div{padding:3px 0;display:flex;justify-content:space-between}
+.cbd .plus{color:var(--green)}
+
+/* ===== File tree ===== */
+.ft{font-family:var(--font-mono);font-size:13px;line-height:2}
+.ft .dir{color:var(--accent)}.ft .file{color:var(--text-dim)}
+.ft .desc{color:var(--text-dim);font-family:var(--font-body);font-size:12px}
+.ft ul{list-style:none;padding-left:20px}.ft>ul{padding-left:0}
+
+/* ===== Log output ===== */
+.lo{background:#0a0c10;border:1px solid #21262d;border-radius:var(--radius);
+padding:16px 20px;font-family:var(--font-mono);font-size:12px;line-height:1.8;
+overflow-x:auto;max-height:500px;overflow-y:auto;color:#8b949e;margin:12px 0 20px}
+.lo .ph{color:var(--accent);font-weight:600}
+.lo .ok{color:var(--green)}.lo .wa{color:var(--orange)}.lo .nu{color:var(--cyan)}
+
+/* ===== Walkthrough steps ===== */
+.wt-steps{counter-reset:step}
+.wt-step{counter-increment:step;display:flex;gap:16px;margin:12px 0;padding:16px;
+background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);align-items:flex-start}
+.wt-step::before{content:counter(step);min-width:32px;height:32px;
+background:var(--accent-dim);color:#fff;border-radius:50%;display:flex;
+align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.wt-step .wt-label{flex:1;font-size:14px}
+.wt-step .wt-label strong{color:var(--text-bright)}
+.wt-step .wt-score{font-family:var(--font-mono);font-weight:700;font-size:16px;
+color:var(--green);white-space:nowrap;min-width:60px;text-align:right}
+.wt-running{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);margin-top:4px}
+.wt-total{display:flex;justify-content:space-between;align-items:center;
+padding:16px 20px;background:var(--accent-dim);border-radius:var(--radius);margin-top:16px}
+.wt-total .wt-sum{font-size:32px;font-weight:700;color:#fff;font-family:var(--font-display)}
+.wt-total .wt-verdict{font-size:16px;color:rgba(255,255,255,.8)}
+
+/* ===== Decision tree ===== */
+.dtree{display:flex;flex-direction:column;gap:0;align-items:center;padding:20px}
+.dt-node{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius);
+padding:12px 20px;text-align:center;font-size:13px;min-width:200px;position:relative}
+.dt-node.start{border-color:var(--accent);background:var(--accent-dim);color:#fff}
+.dt-node.action{border-color:var(--green);background:#1a3a2a;color:var(--green)}
+.dt-arrow{width:2px;height:24px;background:var(--border);position:relative}
+.dt-arrow::after{content:"";position:absolute;bottom:-4px;left:-4px;
+border:5px solid transparent;border-top-color:var(--border)}
+.dt-branch{display:flex;gap:16px;align-items:flex-start;position:relative}
+.dt-branch::before{content:"";position:absolute;top:-12px;left:50%;width:80%;height:2px;
+background:var(--border);transform:translateX(-50%)}
+.dt-choice{display:flex;flex-direction:column;align-items:center;gap:0;flex:1}
+.dt-choice-label{font-size:11px;color:var(--text-dim);font-weight:600;margin-bottom:4px;text-transform:uppercase}
+
+/* ===== Performance table colors ===== */
+.perf-fast{color:var(--green)}.perf-mid{color:var(--orange)}.perf-slow{color:var(--red)}
+
+/* ===== Text simulator ===== */
+.sim-result{display:none;margin-top:16px}
+.sim-result.visible{display:block}
+.sim-kw-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+border-radius:12px;font-size:12px;font-family:var(--font-mono);margin:3px}
+.sim-kw-tag.hit{background:#1a3a2a;border:1px solid var(--green);color:var(--green)}
+.sim-kw-tag.miss{background:var(--bg-code);border:1px solid var(--border);color:var(--text-dim);opacity:.5}
+
+/* ===== Back to top ===== */
+.btt{position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;
+background:var(--accent-dim);color:#fff;border:none;cursor:pointer;font-size:20px;
+display:none;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.5);
+transition:opacity .2s;z-index:50}
+.btt:hover{background:var(--accent)}
+.btt.visible{display:flex}
+
+/* ===== Chat bubbles ===== */
+.chat{display:flex;flex-direction:column;gap:16px;margin:16px 0 20px}
+.chat-msg{display:flex;gap:12px;align-items:flex-start}
+.chat-msg.user{flex-direction:row-reverse}
+.chat-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
+justify-content:center;font-size:14px;flex-shrink:0;font-weight:700}
+.chat-msg.user .chat-avatar{background:var(--accent-dim);color:#fff}
+.chat-msg.ai .chat-avatar{background:#2a1a3a;color:var(--purple)}
+.chat-bubble{max-width:85%;padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.7}
+.chat-msg.user .chat-bubble{background:var(--accent-dim);color:#fff;border-bottom-right-radius:4px}
+.chat-msg.ai .chat-bubble{background:var(--bg-card);border:1px solid var(--border);
+border-bottom-left-radius:4px;color:var(--text)}
+.chat-bubble code{font-size:12px}
+.chat-bubble .cb-label{font-size:11px;color:var(--text-dim);margin-bottom:6px;
+font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px}
+.chat-bubble .cb-action{display:flex;align-items:center;gap:6px;padding:6px 10px;
+background:var(--bg-code);border-radius:6px;font-family:var(--font-mono);font-size:12px;
+margin:8px 0;color:var(--cyan)}
+.chat-bubble .cb-action::before{content:"\25B6";font-size:10px;color:var(--green)}
+.chat-bubble .cb-result{padding:8px 12px;background:var(--bg-code);border-left:3px solid var(--green);
+border-radius:0 6px 6px 0;font-size:12px;font-family:var(--font-mono);margin:8px 0;line-height:1.6}
+.chat-divider{text-align:center;color:var(--text-dim);font-size:12px;padding:4px 0;
+font-family:var(--font-mono);opacity:.6}
+
+/* ===== Responsive ===== */
+@media(max-width:900px){
+  nav{transform:translateX(-100%)}
+  nav.open{transform:translateX(0)}
+  .hamburger{display:block}
+  .nav-overlay.open{display:block}
+  main{margin-left:0;padding:24px 20px 80px}
+  .hero h1{font-size:28px}
+  .cg{grid-template-columns:1fr}
+  .card-row{grid-template-columns:1fr}
+}
+@media print{nav,.hamburger,.copy-btn,.btt{display:none!important}
+main{margin-left:0;max-width:100%}
+.card,.dc{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<!-- Mobile hamburger -->
+<button class="hamburger" id="menuBtn" aria-label="菜单">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+</button>
+<div class="nav-overlay" id="navOverlay"></div>
+
+<nav id="sideNav">
+<h2>Semantic Search</h2>
+<ul>
+<li><a href="#overview">概览</a></li>
+<li><a href="#quickstart">快速入门</a></li>
+<li><a href="#ai-interaction">与 AI 对话</a></li>
+<li class="sl">设计</li>
+<li><a href="#philosophy">设计理念</a></li>
+<li><a href="#architecture">架构与数据流</a></li>
+<li><a href="#files">文件组成</a></li>
+<li><a href="#scoring">评分算法</a></li>
+<li><a href="#walkthrough">评分 Walkthrough</a></li>
+<li><a href="#decision">决策树</a></li>
+<li class="sl">教程</li>
+<li><a href="#tut-1">1. 基础搜索</a></li>
+<li><a href="#tut-2">2. 带过滤</a></li>
+<li><a href="#tut-3">3. Comments 搜索</a></li>
+<li><a href="#tut-4">4. 缓存与增量</a></li>
+<li><a href="#tut-5">5. 全功能真实示例</a></li>
+<li><a href="#tut-dry">6. Dry-Run 演示</a></li>
+<li><a href="#tut-multi">7. 多类型搜索</a></li>
+<li><a href="#tut-smart">8. Smart 搜索</a></li>
+<li><a href="#tut-parallel">9. 并行 &amp; 日志</a></li>
+<li><a href="#tut-crossref">10. 交叉引用</a></li>
+<li><a href="#tut-crosstopic">11. 跨主题关联</a></li>
+<li class="sl">参考</li>
+<li><a href="#params">参数参考</a></li>
+<li><a href="#report-format">报告格式</a></li>
+<li><a href="token-tutorial/">Token 设置指南</a></li>
+<li><a href="#performance">性能特征</a></li>
+<li><a href="#calculator">评分计算器</a></li>
+<li><a href="#simulator">文本模拟器</a></li>
+<li><a href="#troubleshooting">故障排除</a></li>
+<li><a href="#changelog">Changelog</a></li>
+</ul>
+</nav>
+
+<main>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero" id="overview">
+<h1>GitHub<br>Semantic Search</h1>
+<p class="sub">AI 驱动的同义词扩展 + 多轮关键词搜索 + 语义相关性评分 + <strong>AI 二次审阅</strong><br>支持 Issues / PRs / Code / Commits / Discussions 五种内容类型 &mdash; 并行执行</p>
+<div class="badges">
+<span class="badge"><span class="dot g"></span>Python 3.10+</span>
+<span class="badge"><span class="dot b"></span>v6</span>
+<span class="badge"><span class="dot o"></span>AI Skill</span>
+<span class="badge"><span class="dot g"></span>5 Types</span>
+<span class="badge"><span class="dot b"></span>Smart</span>
+<span class="badge"><span class="dot g"></span>Parallel</span>
+<span class="badge"><span class="dot o"></span>121 Tests</span>
+</div>
+</section>
+
+<!-- ==================== QUICK START ==================== -->
+<section id="quickstart">
+<h2>快速入门</h2>
+<p>三步完成第一次搜索：</p>
+<div class="wt-steps">
+<div class="wt-step">
+<div class="wt-label"><strong>配置 GitHub Token</strong> <span style="font-size:12px;color:var(--orange)">(强烈推荐)</span><br>
+<span style="font-size:13px;color:var(--text-dim)">Token 将 Search API 配额从 10&rarr;30 次/分钟，REST API 从 60&rarr;5,000 次/小时。生成时无需勾选任何权限 (scope)。</span>
+<pre style="margin:8px 0;font-size:12px;padding:8px 12px"><code><span class="cmt"># PowerShell</span>
+$env:GITHUB_TOKEN = "ghp_你的token"
+<span class="cmt"># Linux / macOS</span>
+export GITHUB_TOKEN=ghp_你的token</code></pre>
+<span style="font-size:13px"><a href="token-tutorial/">查看 Token 申请图文教程 &rarr;</a> 含截图 + 常见问题</span>
+</div></div>
+<div class="wt-step">
+<div class="wt-label"><strong>让 Cursor AI 生成配置并执行</strong><br>
+<span style="font-size:13px;color:var(--text-dim)">在 Cursor 中直接对话：</span>
+<div style="background:var(--bg-code);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin:8px 0;font-size:13px;font-style:italic">"帮我搜索 <code>ROCm/rocm-libraries</code> 仓库里 <code>hipblaslt</code> 组件的 <code>page fault</code> 相关 issue"</div>
+<span style="font-size:13px;color:var(--text-dim)">AI 会自动：生成 <code>search_config.json</code> &rarr; 调用搜索脚本 &rarr; 输出 Markdown 报告</span>
+</div></div>
+<div class="wt-step">
+<div class="wt-label"><strong>或手动创建配置并运行</strong><br>
+<span style="font-size:13px;color:var(--text-dim)">创建 <code>search_config.json</code>（最小示例）：</span>
+<pre style="margin:8px 0;font-size:12px;padding:8px 12px"><code>{
+  <span class="str">"repo"</span>: <span class="str">"ROCm/rocm-libraries"</span>,
+  <span class="str">"component"</span>: <span class="str">"hipblaslt"</span>,
+  <span class="str">"topic"</span>: <span class="str">"page fault"</span>,
+  <span class="str">"keywords"</span>: {
+    <span class="str">"high"</span>: [<span class="str">"page fault"</span>, <span class="str">"memory access fault"</span>],
+    <span class="str">"medium"</span>: [<span class="str">"sigsegv"</span>, <span class="str">"segfault"</span>]
+  },
+  <span class="str">"queries"</span>: [
+    <span class="str">"{component} \"page fault\""</span>,
+    <span class="str">"{component} \"memory access fault\" OR \"sigsegv\""</span>
+  ]
+}</code></pre>
+<span style="font-size:13px;color:var(--text-dim)">然后执行：</span>
+<pre style="margin:8px 0;font-size:12px;padding:8px 12px"><code>python search_github.py --config search_config.json -o results.md</code></pre>
+<span style="font-size:13px;color:var(--text-dim)">需要搜索更多类型？加上 <code>--search-types issues prs code</code>（v6 自动并行执行）。需要搜索评论？加上 <code>--search-comments</code>。需要 AI 精准过滤？加上 <code>--intermediate-json intermediate.json</code>（见<a href="#tut-smart">教程 8</a>）。完整字段说明见<a href="#params">参数参考</a>。</span>
+</div></div>
+</div>
+</section>
+
+<!-- ==================== AI INTERACTION ==================== -->
+<section id="ai-interaction">
+<h2>与 Cursor AI 对话</h2>
+<p>本工具是一个 <strong>AI Skill</strong> &mdash; 主要使用方式并非手动输入命令，而是在 Cursor IDE 中用自然语言描述搜索需求。以下十二个场景展示从需求到结果的完整对话流程。</p>
+
+<div class="card" style="margin-bottom:16px;border-left:3px solid var(--text-dim)">
+<h4 style="margin-top:0;font-size:13px;color:var(--text-dim)">Phase 工作流</h4>
+<p style="font-size:12px;color:var(--text-dim);margin:0">每次搜索 AI 自动执行以下阶段。标准搜索走 Phase 1&ndash;5；Smart 搜索追加 Phase 6&ndash;7。</p>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:11px">
+<span style="background:var(--bg-code);padding:3px 8px;border-radius:4px">1. 理解意图</span>
+<span style="background:var(--bg-code);padding:3px 8px;border-radius:4px">2. 同义词扩展</span>
+<span style="background:var(--bg-code);padding:3px 8px;border-radius:4px">3. 生成配置</span>
+<span style="background:var(--bg-code);padding:3px 8px;border-radius:4px">4. 执行搜索</span>
+<span style="background:var(--bg-code);padding:3px 8px;border-radius:4px">5. 结果摘要</span>
+<span style="background:rgba(63,185,80,.1);padding:3px 8px;border-radius:4px;color:var(--green)">6. AI 审阅 (Smart)</span>
+<span style="background:rgba(63,185,80,.1);padding:3px 8px;border-radius:4px;color:var(--green)">7. 二轮补搜 (Smart)</span>
+</div>
+</div>
+
+<!-- Scenario 1 -->
+<details open>
+<summary>场景 1: 基础搜索 &mdash; 一句话触发完整流程</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">帮我找 ROCm/rocm-libraries 中 hipblaslt 组件 page fault 相关的 issue</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<div class="cb-label">Phase 1 &mdash; 理解意图</div>
+<p style="margin:0 0 8px">提取到：<code>repo=ROCm/rocm-libraries</code>、<code>component=hipblaslt</code>、<code>topic=page fault</code></p>
+<div class="cb-label">Phase 2 &mdash; 同义词扩展</div>
+<p style="margin:0 0 8px">"page fault" 的同义词覆盖 6 个维度：精确同义（memory access fault, segmentation fault）、错误信号（SIGSEGV, SIGBUS）、后果（GPU hang, GPU reset）、驱动层术语（GCVM_L2_PROTECTION_FAULT）、日志关键字（agent handle, gpu node）。共生成 <strong>5H + 9M + 22L</strong> 关键词。</p>
+<div class="cb-label">Phase 3&ndash;4 &mdash; 配置 + 自动查询构建 + 执行</div>
+<div class="cb-action">写入 search_config.json（仅关键词，查询由代码自动构建 15 条）</div>
+<div class="cb-action">python search_github.py --config search_config.json --search-comments -o search_results.md</div>
+<div class="cb-result">搜索完成：82 个 issues，49 个达标，<strong>7 个高度相关</strong></div>
+<div class="cb-label">Phase 5 &mdash; 结果摘要</div>
+<p style="margin:0">找到 6 个 score &ge; 10 的高度相关 issue：</p>
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li><strong>#1132</strong> (23.9) Strix Halo GPU hangs &mdash; closed</li>
+<li><strong>#459</strong> (19.5) kernel oops for gfx1201 &mdash; open</li>
+<li><strong>#4128</strong> (14.3) hipblasLtMatmulAlgoGetHeuristic SIGSEGV &mdash; open</li>
+<li><strong>#84</strong> (12.6) kernel oops for gfx1151 &mdash; open</li>
+<li><strong>#265</strong> (12.3) Memory access fault by GPU node-2 &mdash; open</li>
+<li><strong>#3211</strong> (10.0) Conditionally enable Expert Scheduling Mode &mdash; open</li>
+</ul>
+<p style="margin:8px 0 0;font-size:13px;color:var(--text-dim)">注意：#3211 标题未提及 "page fault"，通过同义词 "illegal memory access" 被发现 &mdash; 这就是语义扩展的价值。</p>
+</div></div>
+</div>
+<p style="font-size:13px;color:var(--text-dim)">全流程自动执行：意图理解 &rarr; 同义词扩展 &rarr; 配置生成 &rarr; 脚本执行 &rarr; 结果解读 &rarr; 摘要输出。用户只需一句自然语言描述。</p>
+</div>
+</details>
+
+<!-- Scenario 2 -->
+<details>
+<summary>场景 2: 追加过滤条件 &mdash; 缩小搜索范围</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">结果太多了，只看 2024 年之后创建的 open issue</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">在配置中加入过滤条件：<code>"state": "open"</code>、<code>"date_from": "2024-01-01"</code></p>
+<div class="cb-action">更新 search_config.json，添加 filters</div>
+<div class="cb-action">python search_github.py --config search_config.json --search-comments -o search_results.md</div>
+<div class="cb-result">过滤后：6 个高度相关 (open, 2024+)，#1132 被排除（closed）</div>
+<p style="margin:0;font-size:13px">如果你想进一步缩小到某个日期之前，可以说 "只看 2024 到 2025 年的"，我会同时设置 <code>date_from</code> 和 <code>date_to</code>。</p>
+</div></div>
+</div>
+</div>
+</details>
+
+<!-- Scenario 3 -->
+<details>
+<summary>场景 3: 增量调优 &mdash; 排除误报、补充关键词</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">#3981 和 #3869 是 Tensile 的 segfault，跟 page fault 无关，排除掉。另外再加一些关于 "protection violation" 的关键词</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">好，做两件事：</p>
+<ol style="font-size:13px;margin:0 0 8px 16px">
+<li><code>"exclude_issues": [3981, 3869]</code> 排除这两个误报</li>
+<li>补充关键词：高权重 <code>"protection violation"</code>，中权重 <code>"memory protection"</code>，低权重 <code>"access violation"</code>，并新增对应查询</li>
+</ol>
+<div class="cb-action">更新 search_config_v2.json</div>
+<div class="cb-action">python search_github.py --config search_config_v2.json --search-comments --cache-file .cache.json --resume -o search_results.md</div>
+<div class="cb-result">[缓存] 恢复 82 个 issues，新增 1 个，排除 2 个<br>最终：48 个达标，5 个高度相关</div>
+<p style="margin:0;font-size:13px">增量搜索使用了上次的缓存，仅搜索新增查询并重新评分，耗时 ~10 秒。</p>
+</div></div>
+</div>
+<p style="font-size:13px;color:var(--text-dim)">多轮调优的关键：<code>--cache-file</code> + <code>--resume</code>。已收集的全类型结果（Issues、PRs、Code 等）和评论不会重复获取，仅新增查询与新关键词触发增量搜索。</p>
+</div>
+</details>
+
+<!-- Scenario 4 -->
+<details>
+<summary>场景 4: 全仓库搜索 &mdash; 不限组件</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">不只是 hipblaslt，帮我搜索整个 rocm-libraries 仓库里所有 page fault 相关的 issue</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">全仓库搜索模式：<code>"component": ""</code>。查询中不再包含组件名，直接用关键词搜索，例如：</p>
+<pre style="margin:8px 0;font-size:12px;padding:8px 12px"><code>"page fault" OR "memory access fault"
+"segmentation fault" OR "illegal memory access"
+"SIGSEGV" OR "SIGBUS" OR "segfault"</code></pre>
+<div class="cb-action">生成 search_config.json（component 留空，15 条查询）</div>
+<div class="cb-action">python search_github.py --config search_config.json --search-comments -o search_results.md</div>
+<div class="cb-result">搜索完成：210+ 个 issues，28 个高度相关（跨 hipblaslt, miopen, rocblas, rccl 等组件）</div>
+<p style="margin:0;font-size:13px;color:var(--text-dim)">注意：全仓库模式下无组件加分（+5），评分完全依赖关键词匹配。返回结果量大幅增加，建议配合 <code>--date-from</code> 缩小范围。</p>
+</div></div>
+</div>
+</div>
+</details>
+
+<!-- Scenario 5 -->
+<details>
+<summary>场景 5: 先预览再执行 &mdash; 确认搜索策略</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">帮我搜 hipblaslt 的 page fault issue，但先让我看看你会发什么查询，别直接跑</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">好的，先用 dry-run 模式预览：</p>
+<div class="cb-action">生成 search_config.json</div>
+<div class="cb-action">python search_github.py --config search_config.json --dry-run</div>
+<div class="cb-result">DRY-RUN 预览：<br>关键词 5H + 9M + 22L<br>将发送 13 条查询（详见输出）<br>预计 API 调用：13 次 Search + 0 次 REST</div>
+<p style="margin:0;font-size:13px">以上是即将发送的所有查询，不消耗 API 配额。你可以：</p>
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li>确认无误后说 <strong>"执行搜索"</strong></li>
+<li>要求调整：<em>"去掉第 9 条查询"</em> 或 <em>"把 gpu hang 从低权重改成中权重"</em></li>
+</ul>
+</div></div>
+
+<div class="chat-divider">&mdash; 用户审阅后 &mdash;</div>
+
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">可以，执行吧，顺便加上 comments 搜索</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<div class="cb-action">python search_github.py --config search_config.json --search-comments -o search_results.md</div>
+<div class="cb-result">搜索完成：82 个 issues，49 个达标，7 个高度相关</div>
+</div></div>
+</div>
+</div>
+</details>
+
+<!-- Scenario 6 -->
+<details>
+<summary>场景 6: 多类型搜索 &mdash; 同时搜 Issues + PRs + Code (v6 并行)</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">帮我找 ROCm/rocm-libraries 中 page fault 相关的所有内容，不只是 issue，PR 和代码也要搜</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<div class="cb-label">Phase 1&ndash;2 &mdash; 理解意图 + 同义词扩展</div>
+<p style="margin:0 0 8px">提取到 <code>repo=ROCm/rocm-libraries</code>、<code>topic=page fault</code>，你需要搜索 Issues、PRs 和 Code 三种类型。生成 5H + 9M + 22L 关键词。</p>
+<div class="cb-label">Phase 3 &mdash; 配置生成（查询自动构建）</div>
+<p style="margin:0 0 4px">在配置中设置 <code>"search_types": ["issues", "prs", "code"]</code>，只写关键词，查询由代码自动构建：</p>
+<div class="cb-action">写入 search_config.json（含 search_types + 关键词，查询自动生成 15 条）</div>
+<div class="cb-label">Phase 4 &mdash; 执行搜索</div>
+<div class="cb-action">python search_github.py --config search_config.json --search-comments -o search_results.md</div>
+<div class="cb-result">Issues: 82 个收集, 49 个达标, 7 个高度相关<br>PRs: 23 个收集, 12 个达标, 3 个高度相关（2 个已合并）<br>Code: 15 个文件匹配, 8 个达标</div>
+<div class="cb-label">Phase 5 &mdash; 结果摘要</div>
+<p style="margin:0">跨类型汇总：</p>
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li><strong>Issues:</strong> #265 (26.0) Memory access fault, #1132 (19.0) Strix Halo GPU hangs ...</li>
+<li><strong>PRs:</strong> #4521 (18.5) Fix memory access fault in hipblaslt gemm <span style="color:var(--green)">[merged]</span></li>
+<li><strong>Code:</strong> hipblaslt/src/amd_detail/memory_fault_handler.cpp (12.0)</li>
+</ul>
+<p style="margin:8px 0 0;font-size:13px;color:var(--text-dim)">PR #4521 已合并，可能已修复 #265 报告的问题。Code 搜索找到了内存错误处理的源码。</p>
+</div></div>
+</div>
+<p style="font-size:13px;color:var(--text-dim)"><code>search_types</code> 支持任意组合 5 种类型：<code>issues</code>、<code>prs</code>、<code>code</code>、<code>commits</code>、<code>discussions</code>。不指定时默认仅搜索 issues。v6 多类型搜索默认并行执行。</p>
+</div>
+</details>
+
+<!-- Scenario 7 (v6 NEW) -->
+<details>
+<summary>场景 7: v6 Smart 搜索 &mdash; AI 审阅 + 二轮补搜</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">帮我全面搜索 hipblaslt 的 page fault，要精准一些，把不相关的过滤掉</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<div class="cb-label">Phase 1&ndash;3 &mdash; 理解意图 + 同义词扩展 + 配置生成</div>
+<p style="margin:0 0 8px">你提到"精准"和"过滤"，启用 Smart 流程。搜索类型设为 issues + prs + code。</p>
+<div class="cb-label">Phase 4 &mdash; 第一轮搜索 (并行)</div>
+<div class="cb-action">python search_github.py -c search_config.json --search-types issues prs code --intermediate-json intermediate.json --cache-file .cache.json -q -o results_r1.md</div>
+<div class="cb-result">Issues: 42 收集, 8 关键词匹配<br>PRs: 28 收集, 3 关键词匹配<br>Code: 15 文件, 12 关键词匹配<br>并行执行，总耗时 14.5s</div>
+<div class="cb-label">Phase 5 &mdash; AI 审阅 intermediate.json</div>
+<p style="margin:0 0 8px">审阅中间结果，发现：</p>
+<ul style="font-size:13px;margin:0 0 8px 16px">
+<li>Issue #2034: body 明确 &ldquo;this is NOT a page fault&rdquo; &rarr; 噪声，设 <code>ai_score: 0</code></li>
+<li>PR #1892: 标题无 &ldquo;page fault&rdquo;，但 body 描述修复非法内存访问，且 <code>fixes #1601</code> &rarr; 提升至 <code>ai_score: 18.0</code></li>
+<li>发现首轮缺少关键词 &ldquo;illegal memory access&rdquo;</li>
+</ul>
+<div class="cb-action">写入 ai_overrides.json（2 条覆盖）</div>
+<div class="cb-label">Phase 6 &mdash; 二轮补搜</div>
+<div class="cb-action">python search_github.py -c search_config.json --cache-file .cache.json --resume --score-overrides ai_overrides.json --append-queries "hipblaslt \"illegal memory access\"" -q -o results_smart.md</div>
+<div class="cb-result">缓存恢复 85 结果 + 新查询补搜 3 个新结果<br>AI 覆盖：1 条噪声移除, 1 条提升<br>交叉引用：PR #1892 → fixes Issue #1601</div>
+<div class="cb-label">Phase 7 &mdash; 最终报告</div>
+<p style="margin:0">经 AI 审阅后精准度提升：</p>
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li><strong>Issue #1601</strong> (23.9) Memory access fault on MI300X &mdash; 确认为核心问题</li>
+<li><strong>PR #1892</strong> (18.0, AI 提升) Fix illegal memory access &mdash; 修复了 #1601 <span style="color:var(--green)">[merged]</span></li>
+<li><strong>Issue #2034</strong> <span style="color:var(--red)">[已移除]</span> &mdash; AI 判定为噪声</li>
+<li style="color:var(--text-dim)">... 完整结果见 results_smart.md</li>
+</ul>
+</div></div>
+</div>
+<p style="font-size:13px;color:var(--text-dim)">Smart 流程对 Token 消耗的额外开销：二轮补搜仅搜索新查询（缓存覆盖已有结果），通常增加 2&ndash;5 次 API 调用。AI 审阅与评分覆盖不消耗 GitHub API 配额。</p>
+</div>
+</details>
+
+<!-- Scenario 8 -->
+<details>
+<summary>场景 8: 搜代码 / 提交 / 讨论 &mdash; 单类型精确搜索</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">有没有处理 page fault 的代码？帮我搜一下 rocm-libraries 里的</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">搜索类型设为 <code>code</code>，关键词聚焦 page fault 和相关错误处理函数名。</p>
+<div class="cb-action">python search_github.py --config config.json --search-types code -o code_results.md</div>
+<div class="cb-result">Code: 1 个文件命中关键词 (score: 11.0)<br>docs/hipblaslt-runtime-triage-checklist.md &mdash; 包含 "Segmentation Fault (SIGSEGV)" 处理流程</div>
+<p style="margin:0;font-size:13px">Code 搜索的评分基于<strong>关键词在文件路径和代码内容中的匹配</strong>，路径命中额外 +1.0/词。需要 <code>GITHUB_TOKEN</code> 才能获取代码片段。</p>
+</div></div>
+
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">那有没有修复 page fault 的提交记录？</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">追加 <code>commits</code> 搜索类型。</p>
+<div class="cb-action">python search_github.py --config config.json --search-types commits -o commit_results.md</div>
+<div class="cb-result">Commits: 搜索完成，首行摘要含关键词的提交获得额外 +1.5 加分</div>
+<p style="margin:0;font-size:13px">如需进一步搜索社区讨论（Discussions），说 "搜一下讨论" 或 "community discussions about X" 即可。</p>
+</div></div>
+</div>
+</div>
+</details>
+
+<!-- Scenario 9 -->
+<details>
+<summary>场景 9: 噪声太多 &mdash; 从标准搜索自然升级到 Smart</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">搜一下 rocm-libraries 里 hipblaslt segfault 的 issue 和 PR</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<div class="cb-action">python search_github.py --config config.json --search-types issues prs --search-comments --cache-file .cache.json -o results.md</div>
+<div class="cb-result">Issues: 86 收集, 10 关键词匹配 | PRs: 1002 收集, 10 关键词匹配<br>报告已输出到 results.md</div>
+</div></div>
+
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">结果里误报太多了，很多 segfault 其实跟 page fault 无关，帮我过滤一下</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">检测到过滤需求，启用 Smart 流程。从缓存恢复第一轮结果（不重新调用 API），输出中间 JSON 供审阅。</p>
+<div class="cb-action">python search_github.py --config config.json --cache-file .cache.json --resume --intermediate-json intermediate.json -q -o results.md</div>
+<p style="margin:0 0 8px">审阅 intermediate.json，发现 3 条噪声：</p>
+<ul style="font-size:13px;margin:0 0 8px 16px">
+<li>Issue #3981: Tensile 内部 segfault，与 page fault 无关 &rarr; <code>ai_score: 0</code></li>
+<li>Issue #3869: 同上，ICacheFlush 导致的 segfault &rarr; <code>ai_score: 0</code></li>
+<li>PR #4039: 降低并行度的构建调整，segfault 仅出现在背景描述中 &rarr; <code>ai_score: 0</code></li>
+</ul>
+<div class="cb-action">写入 ai_overrides.json（3 条覆盖）</div>
+<div class="cb-action">python search_github.py --config config.json --cache-file .cache.json --resume --score-overrides ai_overrides.json -q -o results_filtered.md</div>
+<div class="cb-result">3 条噪声已移除，剩余 17 个关键词匹配结果</div>
+<p style="margin:0;font-size:13px">此流程<strong>未消耗额外 API 配额</strong>（全部从缓存恢复）。只要你说"过滤"、"误报太多"、"噪声"，我就会自动启用 Smart 审阅。</p>
+</div></div>
+</div>
+</div>
+</details>
+
+<!-- Scenario 10 -->
+<details>
+<summary>场景 10: 这个 bug 被修过吗？ &mdash; 交叉引用追踪</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">hipblaslt 的 page fault 有没有被修过？帮我找一下修复的 PR 和 commit</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">搜索 Issues + PRs（≥2 种可关联类型），交叉引用引擎自动触发，检测关联并生成关系图。</p>
+<div class="cb-action">python search_github.py --config config.json --search-types issues prs --cache-file .cache.json -o fix_tracking.md</div>
+<div class="cb-result">Issues: 82 搜索 &rarr; 47 相关 | PRs: 233 搜索 &rarr; 121 相关<br>交叉引用: 33 条引用 (Issue↔PR: 8, PR↔PR: 25)<br>关系图: cross_ref_graph.png</div>
+<p style="margin:0 0 8px">交叉引用摘要（含关系图）：</p>
+<div style="background:var(--bg-code);border-radius:6px;padding:10px 14px;font-family:var(--font-mono);font-size:12px;line-height:1.8;margin:0 0 8px">
+<span style="color:var(--text-dim)">### Issue ↔ PR 关联</span><br>
+<span style="color:var(--red)">Issue #2072</span> ← <span style="color:var(--green)">PR #2073</span> <strong style="color:var(--red)">fixes</strong> (open)<br>
+<span style="color:var(--red)">Issue #288</span> ← <span style="color:var(--green)">PR #2073</span> <strong style="color:var(--red)">fixes</strong> (open)<br>
+<span style="color:var(--red)">Issue #1975</span> ← <span style="color:var(--green)">PR #2797</span> <strong style="color:var(--red)">fixes</strong> (merged)<br><br>
+<span style="color:var(--text-dim)">### PR → PR 关联</span><br>
+<span style="color:var(--green)">PR #3411</span> → <span style="color:var(--green)">PR #2718</span> <span style="color:var(--text-dim)">refs</span> (revert)<br>
+<span style="color:var(--green)">PR #3416</span> → <span style="color:var(--green)">PR #2718</span> <span style="color:var(--text-dim)">refs</span> (revert)<br><br>
+<span style="color:var(--text-dim)">### 关系图: 仅展示枢纽节点（≥2 条连线）</span>
+</div>
+<div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px;margin:8px 0;text-align:center">
+<img src="cross_ref_graph.png" alt="交叉引用关系图" style="max-width:100%;border-radius:4px">
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:8px 0;padding:8px 12px;background:var(--bg-code);border-radius:6px;font-size:12px;color:var(--text-dim)">
+<span><strong>图例:</strong></span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:28px;border-top:2.5px solid #CF222E"></span> 粗红实线 = fixes / closes（修复关系）</span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:28px;border-top:1px dashed #8B949E"></span> 细灰虚线 = refs（仅引用，未修复）</span>
+</div>
+<p style="margin:0;font-size:13px">交叉引用在<strong>用户请求 ≥2 种可关联类型</strong>（issues/prs/commits）时<strong>自动启用</strong>，无需额外参数。只要你问"有没有被修过"、"修复了哪些"、"找修复的 PR"，AI 就会配置多类型搜索并自动输出关联关系和关系图。</p>
+</div></div>
+</div>
+</div>
+</details>
+
+<!-- Scenario 11 -->
+<details>
+<summary>场景 11: 跨主题关联分析 &mdash; 症状 vs 根因</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">我想了解 expert scheduling mode 和 page fault 的关联</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">这需要两次搜索 + 交叉比对。分别从"根因"和"症状"两个视角搜索，再找交叉 Issue。</p>
+
+<p style="margin:0 0 4px;font-size:12px;color:var(--cyan);text-transform:uppercase;letter-spacing:1px">搜索 1: Expert Scheduling Mode (根因视角)</p>
+<div class="cb-action">python search_github.py --config esm_config.json --search-types issues prs commits --cache-file esm_cache.json -o esm_report.md</div>
+<div class="cb-result">Issues: 1 关键词匹配 | PRs: 4 关键词匹配 | Commits: 1<br>交叉引用: 3 条 (PR→PR 1, Commit→PR 1, Issue↔PR 1)<br>关系图: cross_ref_graph.png</div>
+
+<p style="margin:8px 0 4px;font-size:12px;color:var(--cyan);text-transform:uppercase;letter-spacing:1px">搜索 2: Page Fault (症状视角)</p>
+<div class="cb-action">python search_github.py --config pagefault_config.json --search-types issues prs commits --cache-file pf_cache.json -o pf_report.md</div>
+<div class="cb-result">Issues: 10 关键词匹配 | PRs: 10 关键词匹配 | Commits: 搜索完成</div>
+
+<p style="margin:8px 0 4px;font-size:12px;color:var(--orange);text-transform:uppercase;letter-spacing:1px">交叉比对</p>
+<div style="background:var(--bg-code);border-radius:6px;padding:10px 14px;font-family:var(--font-mono);font-size:12px;line-height:1.8;margin:0 0 8px">
+<span style="color:var(--orange)">交叉点: Issue #3211</span> 同时出现在两次搜索中<br>
+&nbsp;&nbsp;ESM 搜索: 匹配 <code>expert scheduling mode</code> (score: 7.6)<br>
+&nbsp;&nbsp;Page Fault 搜索: 匹配 <code>illegal memory access</code> (score: 10.0)<br><br>
+<span style="color:var(--text-dim)">因果链:</span><br>
+&nbsp;&nbsp;Expert Scheduling Mode 启用 (ROCm 7.0, hipblaslt)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&darr; AMD KFD 驱动不支持 (gfx12)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&darr; "HIP error: an <span style="color:var(--red)">illegal memory access</span> was encountered"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&darr; <span style="color:var(--green)">PR #3164</span> 禁用 ESM (merged) &larr; <span style="color:var(--accent)">Commit 29b7468</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&darr; <span style="color:var(--orange)">Issue #3211</span> 跟踪有条件重新启用 (open)
+</div>
+<p style="margin:0;font-size:13px">同一个 Issue 从<strong>症状</strong>（page fault）和<strong>根因</strong>（ESM）两个方向被独立发现。这正是语义搜索的价值 &mdash; 单次搜索只能看到一个视角，跨主题分析才能揭示完整的因果关系。</p>
+</div></div>
+</div>
+</div>
+</details>
+
+<!-- Scenario 12 (v6 NEW) -->
+<details>
+<summary>场景 12: 行为描述型搜索 &mdash; "tuning 前后没有效果"</summary>
+<div class="db">
+<div class="chat">
+<div class="chat-msg user"><div class="chat-avatar">U</div>
+<div class="chat-bubble">我遇到一个问题：tuning hipblaslt 时，tuning 前后没有效果，请你搜索相关 issue</div></div>
+
+<div class="chat-msg ai"><div class="chat-avatar">AI</div>
+<div class="chat-bubble">
+<p style="margin:0 0 8px">这是一个<strong>"行为描述型"搜索</strong> &mdash; 用户描述的是行为现象而非具体错误消息。关键词策略需要调整：<code>high</code> 放技术术语（tuning file、logic yaml），而非行为描述（tuning no effect）。</p>
+
+<p style="margin:0 0 4px;font-size:12px;color:var(--orange);text-transform:uppercase;letter-spacing:1px">关键词分层策略</p>
+<div style="background:var(--bg-code);border-radius:6px;padding:10px 14px;font-family:var(--font-mono);font-size:12px;line-height:1.8;margin:0 0 8px">
+<span style="color:var(--red)">high:</span> tuning file, tuning data, logic yaml, match table, tuning result<br>
+<span style="color:var(--orange)">medium:</span> heuristic, solution selection, selection cache, dat file, MatchTable, tuning database<br>
+<span style="color:var(--text-dim)">low:</span> tuning no effect, tuning not working, hipblaslt-bench, benchmark, cache not used
+</div>
+<p style="margin:0 0 4px;font-size:11px;color:var(--text-dim)">注意：种子词库自动补充了 <code>heuristic</code>、<code>dat file</code> 等基线同义词。行为描述 "tuning no effect" 放在 low 层（不大可能原样出现在 issue 中）。</p>
+
+<div class="cb-action">python search_github.py --config tuning_config.json --search-comments -o tuning_report.md -q</div>
+<div class="cb-result">Issues: 84 搜索 &rarr; 19 关键词命中 / 47 组件相关 | 最高分: 16.7</div>
+
+<p style="margin:8px 0 4px;font-size:12px;color:var(--green);text-transform:uppercase;letter-spacing:1px">Top 3 结果</p>
+<div style="border-left:3px solid var(--green);padding:8px 14px;margin:4px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0;font-size:13px">
+<strong><a href="https://github.com/ROCm/rocm-libraries/issues/932">#932</a></strong> (score: <span style="color:var(--green);font-weight:700">16.7</span>) &mdash; hipblaslt gemm tuning<br>
+<span style="font-size:11px;color:var(--text-dim)">匹配: heuristic, hipblaslt-bench, logic yaml, tuning file | 状态: closed</span>
+</div>
+<div style="border-left:3px solid var(--green);padding:8px 14px;margin:4px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0;font-size:13px">
+<strong><a href="https://github.com/ROCm/rocm-libraries/issues/260">#260</a></strong> (score: <span style="color:var(--green);font-weight:700">16.4</span>) &mdash; HIPBLASLT_TUNING_OVERRIDE_FILE fails to load when using CPP api<br>
+<span style="font-size:11px;color:var(--text-dim)">匹配: heuristic, hipblaslt-bench, tuning file | 状态: open</span>
+</div>
+<div style="border-left:3px solid var(--green);padding:8px 14px;margin:4px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0;font-size:13px">
+<strong><a href="https://github.com/ROCm/rocm-libraries/issues/2905">#2905</a></strong> (score: <span style="color:var(--green);font-weight:700">15.6</span>) &mdash; Tuning file in hipBLASLt is not cached, opened on every GEMM kernel init<br>
+<span style="font-size:11px;color:var(--text-dim)">匹配: heuristic, tuning file | 状态: open</span>
+</div>
+
+<p style="margin:8px 0 0;font-size:13px">
+<strong>关键经验</strong>：行为描述型搜索的 <code>high</code> 关键词应该放<strong>技术术语</strong>（tuning file、logic yaml）而非<strong>行为描述</strong>（tuning no effect）。因为 GitHub issue 中出现的是具体的技术名词，而非用户描述问题的自然语言。种子词库自动补充了领域专属术语，保证了基线覆盖。
+</p>
+</div></div>
+</div>
+</div>
+</details>
+
+<div class="card" style="margin-top:24px;border-left:3px solid var(--accent)">
+<h4 style="margin-top:0;color:var(--accent)">触发提示词</h4>
+<p style="font-size:13px;margin-bottom:8px">以下自然语言表述均可触发此 Skill。按功能分组：</p>
+
+<h5 style="margin:12px 0 6px;color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:1px">基础搜索</h5>
+<table style="font-size:13px;margin:0 0 12px">
+<tr><td style="white-space:nowrap;color:var(--cyan);width:200px">"找...相关的 issue"</td><td>帮我找 ROCm/rocm-libraries 中 hipblaslt page fault 相关的 issue</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"搜索...的 bug"</td><td>搜索 rocm-libraries 里所有 GPU hang 的 bug</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"有哪些 issue"</td><td>rocm-libraries 里 page fault 有哪些 issue？</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"collect issues"</td><td>Collect all issues related to segmentation fault in hipblaslt</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"find bugs about X"</td><td>Find all bugs about memory leak in rocm-libraries</td></tr>
+</table>
+
+<h5 style="margin:12px 0 6px;color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:1px">多类型 / 全面搜索</h5>
+<table style="font-size:13px;margin:0 0 12px">
+<tr><td style="white-space:nowrap;color:var(--cyan);width:200px">"搜 issue 和 PR"</td><td>帮我找 rocm-libraries 中 page fault 相关的 issue 和 PR</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"全面搜索" / "调研"</td><td>全面搜索 rocm-libraries 中 memory leak 的所有内容</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"search everything"</td><td>Search everything about page fault in hipblaslt</td></tr>
+</table>
+
+<h5 style="margin:12px 0 6px;color:var(--cyan);font-size:12px;text-transform:uppercase;letter-spacing:1px">Code / Commit / Discussion</h5>
+<table style="font-size:13px;margin:0 0 12px">
+<tr><td style="white-space:nowrap;color:var(--cyan);width:200px">"搜代码" / "有没有...代码"</td><td>有没有处理 page fault 的代码？</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"修复的提交"</td><td>有没有修复 page fault 的提交记录？</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"社区讨论"</td><td>社区讨论过这个 page fault 问题吗？</td></tr>
+<tr><td style="white-space:nowrap;color:var(--cyan)">"find code about X"</td><td>Find code that handles page fault in hipblaslt</td></tr>
+</table>
+
+<h5 style="margin:12px 0 6px;color:var(--green);font-size:12px;text-transform:uppercase;letter-spacing:1px">Smart 搜索 (v6)</h5>
+<table style="font-size:13px;margin:0 0 12px">
+<tr><td style="white-space:nowrap;color:var(--green);width:200px">"精准搜索"</td><td>帮我精准搜索 hipblaslt page fault，过滤噪声</td></tr>
+<tr><td style="white-space:nowrap;color:var(--green)">"Smart 搜索"</td><td>用 Smart 模式搜索 rocm-libraries 的 page fault</td></tr>
+<tr><td style="white-space:nowrap;color:var(--green)">"过滤噪声" / "误报太多"</td><td>结果里误报太多了，帮我过滤一下</td></tr>
+<tr><td style="white-space:nowrap;color:var(--green)">"帮我审查结果"</td><td>帮我审查这些结果，把不相关的去掉</td></tr>
+<tr><td style="white-space:nowrap;color:var(--green)">"补搜" / "再搜一下"</td><td>再搜一下 "illegal memory access" 相关的</td></tr>
+<tr><td style="white-space:nowrap;color:var(--green)">"filter noise"</td><td>Too much noise, filter irrelevant results</td></tr>
+</table>
+
+<h5 style="margin:12px 0 6px;color:var(--orange);font-size:12px;text-transform:uppercase;letter-spacing:1px">交叉引用 / 修复追踪 (v6)</h5>
+<table style="font-size:13px;margin:0 0 12px">
+<tr><td style="white-space:nowrap;color:var(--orange);width:200px">"有没有被修过"</td><td>这个 page fault 有没有被修过？</td></tr>
+<tr><td style="white-space:nowrap;color:var(--orange)">"找修复的 PR"</td><td>帮我找修复 page fault 的 PR 和 commit</td></tr>
+<tr><td style="white-space:nowrap;color:var(--orange)">"哪些 PR 关联了"</td><td>哪些 PR 关联了这些 page fault issue？</td></tr>
+<tr><td style="white-space:nowrap;color:var(--orange)">"was this fixed?"</td><td>Was this page fault issue fixed? Find related PRs.</td></tr>
+</table>
+
+<h5 style="margin:12px 0 6px;color:var(--text-dim);font-size:12px;text-transform:uppercase;letter-spacing:1px">辅助功能</h5>
+<table style="font-size:13px;margin:0">
+<tr><td style="white-space:nowrap;color:var(--text-dim);width:200px">"也搜评论"</td><td>也搜一下评论里有没有提到 page fault</td></tr>
+<tr><td style="white-space:nowrap;color:var(--text-dim)">"从上次继续"</td><td>从上次的搜索结果继续，加几个关键词</td></tr>
+<tr><td style="white-space:nowrap;color:var(--text-dim)">"先看看会搜什么"</td><td>先预览一下搜索策略，不要执行</td></tr>
+<tr><td style="white-space:nowrap;color:var(--text-dim)">"只看 open 的"</td><td>只看 open 状态的 issue</td></tr>
+<tr><td style="white-space:nowrap;color:var(--text-dim)">"为什么没搜到 X"</td><td>为什么 Issue #1234 没出现在结果里？（触发 --verbose 排查）</td></tr>
+</table>
+</div>
+</section>
+
+
+<!-- ==================== PHILOSOPHY ==================== -->
+<section id="philosophy">
+<h2>设计理念</h2>
+<h3>为什么需要这个工具？</h3>
+<p>GitHub 内置搜索仅做<strong>精确文本匹配</strong>，不理解语义。搜索 <code>"page fault"</code> 时，仅含 <code>"memory access fault"</code>、<code>"illegal memory access"</code> 或 <code>"SIGSEGV"</code> 的 issue 不会被返回 &mdash; 尽管它们描述同一类错误。</p>
+<p>核心设计理念：<strong>让 AI 做语义扩展，让脚本做精确搜索，用评分算法融合两者。</strong></p>
+<div class="card-row">
+<div class="card"><h4>问题拆解</h4><p><strong>AI 能理解语义但无法遍历 GitHub 数据</strong>（MCP 通过 GitHub Search API 搜索，同样受限于精确匹配），而 <strong>GitHub API 能搜索全量数据但无法理解语义</strong>。</p><p>解决方案：工具将任务拆为两阶段 &mdash; AI 负责<em>意图理解与同义词扩展</em>，脚本负责<em>多轮搜索与评分排序</em></p></div>
+<div class="card"><h4>三层关键词权重</h4><p>同义词与主题的相关程度不同。<code>"page fault"</code> 是核心术语 (+5)，<code>"sigsegv"</code> 是常见伴随信号 (+3)，<code>"core dump"</code> 只是间接关联 (+1)。</p><p>高权重词保证<strong>查准率</strong> (Precision)，低权重词扩大<strong>查全率</strong> (Recall)，三层配合兼顾两者。</p></div>
+</div>
+<div class="card-row">
+<div class="card"><h4>两阶段 Comments 搜索</h4><p>GitHub Search API <strong>仅索引 title 和 body，不索引评论内容</strong>。但很多关键信息在评论中（如调试 log、错误堆栈）。</p><p>逐条获取评论会消耗大量 API 配额，易触发速率限制。工具仅对<strong>中间分数段（默认 3.0~8.0）的 Issue 获取评论</strong> &mdash; 高分结果已确认相关，低分结果即使评论命中也无法超过阈值。</p></div>
+<div class="card"><h4>渐进增强</h4><p>每个功能都是<strong>可选增强</strong>：</p><p style="font-size:13px;line-height:2">基础搜索 &rarr; <span style="color:var(--green)">+过滤</span> &rarr; <span style="color:var(--cyan)">+Comments</span> &rarr; <span style="color:var(--orange)">+缓存</span> &rarr; <span style="color:var(--purple)">+并发</span> &rarr; <span style="color:var(--red)">+排除列表</span> &rarr; <span style="color:var(--accent)">+多类型 (v5)</span> &rarr; <span style="color:var(--green)">+并行执行 (v6)</span> &rarr; <span style="color:var(--cyan)">+Smart AI 审阅 (v6)</span> &rarr; <span style="color:var(--orange)">+交叉引用 (v6)</span></p><p>每层独立，按需组合。不指定 <code>search_types</code> 时回退为仅搜索 Issues；不加 <code>--intermediate-json</code> 时 Smart 流程不启用。</p></div>
+</div>
+</section>
+
+<!-- ==================== ARCHITECTURE ==================== -->
+<section id="architecture">
+<h2>架构与数据流</h2>
+<h3>v6 模块化架构</h3>
+<p>v6 采用<strong>核心引擎 + 搜索器插件 + Smart AI 层</strong>架构。多类型搜索时搜索器并行执行 (<code>ThreadPoolExecutor</code>)，AI 可在搜索后介入审阅与二轮补搜。</p>
+<div class="dc">
+<div class="fd">
+<div class="fb fb-c">配置<small>AI 生成关键词</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-s">查询构建<small>种子词库 +<br>5 轮策略</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-k">并行搜索<small>ThreadPoolExecutor<br>5 种搜索器</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-r">评分<small>关键词 +<br>类型加分</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-o">交叉引用<small>5 类关联 +<br>关系图 PNG</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-c">报告<small>Markdown / JSON</small></div>
+</div>
+<div style="text-align:center;margin-top:16px">
+<div class="fb fb-s" style="display:inline-block;margin-top:8px">API 客户端<small>REST + GraphQL<br>限流 / 重试 / logging</small></div>
+<span style="color:var(--text-dim);font-size:12px;vertical-align:middle;margin:0 10px">&updownarrow; 共享</span>
+<div class="fb fb-k" style="display:inline-block;margin-top:8px">Smart AI 层<small>intermediate JSON &rarr;<br>score overrides &rarr; append queries</small></div>
+</div>
+</div>
+
+<h3>Issue 搜索数据流 (v6 完整流程)</h3>
+<div class="dc">
+<div class="fd">
+<div class="fb fb-s">阶段 1<small>Search API<br>title + body</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-r">评分 1<small>关键词匹配</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-s">阶段 2<small>REST API<br>comments (并发)</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-r">评分 2<small>含 comments</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-o">输出</div>
+</div>
+<div style="text-align:center;margin-top:16px;display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
+<div class="fb fb-k" style="display:inline-block;margin-top:8px">缓存 (Lock)<small>save / resume<br>threading.Lock 保护写入</small></div>
+<div class="fb fb-c" style="display:inline-block;margin-top:8px">logging<small>gss.searcher.issue<br>-v DEBUG / -q WARNING</small></div>
+</div>
+</div>
+<p style="font-size:13px;color:var(--text-dim);margin-top:12px">v6 中，此流程在 <code>ThreadPoolExecutor</code> 中与其他搜索器<strong>并行执行</strong>。搜索完成后，如启用了 <code>--intermediate-json</code>，结果进入 Smart AI 层供 AI 审阅。如启用了 <code>--score-overrides</code>，AI 评分将覆盖原始评分并重新排序。</p>
+
+<h3>五种搜索器对比</h3>
+<table>
+<tr><th>搜索器</th><th>API</th><th>搜索内容</th><th>特殊能力</th></tr>
+<tr><td><code>Issue</code></td><td>REST Search</td><td>title + body + comments</td><td>两阶段评论搜索、并发获取</td></tr>
+<tr><td><code>PR</code></td><td>REST Search</td><td>title + body + review comments</td><td>合并加分 (+2.0)、关联 Issue (+1.5)、文件路径 (+1.5)、修复标题 (+1.0)</td></tr>
+<tr><td><code>Code</code></td><td>REST Search</td><td>文件路径 + 代码内容</td><td>组件路径 +3.0, 关键词路径 +1.0/词, 代码片段提取（需 Token）</td></tr>
+<tr><td><code>Commit</code></td><td>REST Search</td><td>提交信息</td><td>摘要行加分</td></tr>
+<tr><td><code>Discussion</code></td><td>GraphQL</td><td>标题 + 正文 + 回答 + 回复</td><td>采纳答案加分 (+1.0/词，需 Token)</td></tr>
+</table>
+
+<h3>关键设计决策</h3>
+<table>
+<tr><th>决策</th><th>选择</th><th>理由</th></tr>
+<tr><td>架构模式</td><td>核心引擎 + 搜索器插件</td><td>每种类型独立开发、测试、部署，新增类型只需添加一个文件</td></tr>
+<tr><td>搜索策略</td><td>多轮查询 (10&ndash;15 轮)</td><td>单条查询中 OR 组合过多会降低匹配精度；多轮查询使每轮聚焦一组近义词</td></tr>
+<tr><td>评论获取</td><td>两阶段（仅中间分数段）</td><td>逐条获取评论消耗大量 API 配额；高分结果已确认相关，低分结果补充评论仍难达标</td></tr>
+<tr><td>评分模型</td><td>加权关键词 + 类型加分</td><td>共享基础规则 + 各类型独立加分项；模型简单透明，评分过程可追溯</td></tr>
+<tr><td>并发策略</td><td>ThreadPoolExecutor</td><td>I/O 密集型任务，GIL 不影响 HTTP 并发</td></tr>
+<tr><td>Discussion API</td><td>GraphQL (via api_client)</td><td>Discussions 无 REST Search 端点，仅 GraphQL 可用；经 api_client.graphql() 统一处理重试与退避</td></tr>
+<tr><td>缓存格式</td><td>JSON（原子写入 + threading.Lock）</td><td>人类可读、便于 diff、跨平台、不易损坏；并行写入时线程安全</td></tr>
+<tr><td>向后兼容</td><td>旧入口 wrapper + 默认 search_types</td><td>旧配置无 search_types 字段时自动回退为仅搜索 Issues</td></tr>
+<tr><td>并行搜索 (v6)</td><td>多搜索器并行 + <code>--no-parallel</code></td><td>多类型搜索时并行执行搜索器，总耗时 &asymp; 最慢单类型；可通过 flag 退回串行</td></tr>
+<tr><td>日志系统 (v6)</td><td>Python logging (<code>gss.*</code> 层级)</td><td>替代 print，支持 <code>--verbose</code> / <code>--quiet</code> 控制输出粒度</td></tr>
+<tr><td>Smart AI 层 (v6)</td><td>intermediate JSON + score overrides</td><td>AI 审阅中间结果、过滤噪声、补充查询，闭环提升查准率</td></tr>
+<tr><td>交叉引用 (v6)</td><td>正则提取 5 类关联 + 关系图 PNG</td><td>检测 Issue↔PR、PR↔PR、Commit→PR/Issue 共 5 类链接。用户请求 ≥2 种可关联类型时触发。自动生成枢纽过滤关系图（PNG），仅展示 ≥2 条连线的节点</td></tr>
+<tr><td>查询自动构建 (v6.1)</td><td>AI 出词，代码出 Query</td><td>消除 AI 手写查询的质量波动。5 轮策略按预期产出降序排列，配合早停机制最大化效率。config 中 <code>queries</code> 字段变为可选</td></tr>
+<tr><td>种子词库 (v6.1)</td><td>12 主题 ~150 词基线补充</td><td>为 AI 同义词扩展提供兜底。覆盖 memory_fault、OOM、crash 等通用主题。触发词子串匹配，自动合并不重复</td></tr>
+</table>
+</section>
+
+<!-- ==================== FILES ==================== -->
+<section id="files">
+<h2>文件组成</h2>
+<div class="ft"><ul>
+<li><span class="dir">.cursor/skills/github-issue-search/</span>
+<ul>
+<li><span class="file">SKILL.md</span> <span class="desc">&mdash; AI Skill 定义：7 阶段 Smart 工作流、配置格式、5 种搜索类型</span></li>
+<li><span class="file">reference.md</span> <span class="desc">&mdash; 同义词扩展指南：6 维展开方法 + 权重分配</span></li>
+<li><span class="dir">scripts/</span>
+<ul>
+<li><span class="file">search_github.py</span> <span class="desc">&mdash; v6 统一入口（并行调度 + Smart + logging）</span></li>
+<li><span class="file">search_github_issues.py</span> <span class="desc">&mdash; v4 向后兼容 wrapper</span></li>
+<li><span class="dir">core/</span>
+<ul>
+<li><span class="file">api_client.py</span> <span class="desc">&mdash; GitHub API 客户端 (REST + GraphQL, 限流, 重试)</span></li>
+<li><span class="file">models.py</span> <span class="desc">&mdash; 数据模型 (Issue, PR, Code, Commit, Discussion, Config)</span></li>
+<li><span class="file">scorer.py</span> <span class="desc">&mdash; 关键词评分引擎 (各类型独立评分方法)</span></li>
+<li><span class="file">cache.py</span> <span class="desc">&mdash; JSON 缓存 (原子写入, 全 5 类型, 增量搜索)</span></li>
+<li><span class="file">report.py</span> <span class="desc">&mdash; 报告生成 (Markdown + JSON, 全 5 类型)</span></li>
+<li><span class="file">cross_ref.py</span> <span class="desc">&mdash; 交叉引用引擎 (5 类关联检测 + 枢纽过滤关系图 PNG)</span></li>
+<li><span class="file">query_builder.py</span> <span class="desc">&mdash; 查询自动构建 + 种子词库合并 (v6.1)</span></li>
+</ul></li>
+<li><span class="dir">data/</span>
+<ul>
+<li><span class="file">seed_synonyms.json</span> <span class="desc">&mdash; 种子同义词库 (12 个通用主题, ~150 个关键词)</span></li>
+</ul></li>
+<li><span class="dir">searchers/</span>
+<ul>
+<li><span class="file">base.py</span> <span class="desc">&mdash; 搜索器抽象基类</span></li>
+<li><span class="file">issue.py</span> <span class="desc">&mdash; Issue 搜索器 (两阶段 comments)</span></li>
+<li><span class="file">pr.py</span> <span class="desc">&mdash; PR 搜索器 (review comments + 变更文件)</span></li>
+<li><span class="file">code.py</span> <span class="desc">&mdash; Code 搜索器 (文件路径 + 代码片段)</span></li>
+<li><span class="file">commit.py</span> <span class="desc">&mdash; Commit 搜索器 (提交信息)</span></li>
+<li><span class="file">discussion.py</span> <span class="desc">&mdash; Discussion 搜索器 (通过 api_client.graphql())</span></li>
+</ul></li>
+</ul></li>
+<li><span class="dir">tests/</span>
+<ul>
+<li><span class="file">test_api_client.py</span> <span class="desc">&mdash; API 客户端 GET + 搜索测试</span></li>
+<li><span class="file">test_api_graphql.py</span> <span class="desc">&mdash; GraphQL 方法测试 (重试, 限流)</span></li>
+<li><span class="file">test_cache.py</span> <span class="desc">&mdash; 缓存 Issue 读写测试</span></li>
+<li><span class="file">test_cache_multi.py</span> <span class="desc">&mdash; 多类型缓存测试 (PR, Code, Commit, Discussion)</span></li>
+<li><span class="file">test_models.py</span> <span class="desc">&mdash; 数据模型单元测试</span></li>
+<li><span class="file">test_report.py</span> <span class="desc">&mdash; 报告生成测试 (分段, JSON, 完整报告)</span></li>
+<li><span class="file">test_scorer.py</span> <span class="desc">&mdash; 评分引擎单元测试</span></li>
+<li><span class="file">test_searchers.py</span> <span class="desc">&mdash; 5 种搜索器单元测试 (Mock API, 13 tests)</span></li>
+<li><span class="file">test_cross_ref.py</span> <span class="desc">&mdash; 交叉引用引擎测试 (8 tests)</span></li>
+<li><span class="file">test_query_builder.py</span> <span class="desc">&mdash; 查询构建 + 种子词库测试 (20 tests)</span></li>
+</ul></li>
+<li><span class="dir">docs/</span><ul><li><span class="file">index.html</span> <span class="desc">&mdash; 本文档</span></li></ul></li>
+</ul></li>
+</ul></div>
+<h3>核心模块</h3>
+<table>
+<tr><th>模块</th><th>职责</th></tr>
+<tr><td><code>core/api_client.py</code></td><td>统一 GitHub API 客户端：认证、速率限制追踪、指数退避重试、REST 分页搜索 + GraphQL 请求</td></tr>
+<tr><td><code>core/models.py</code></td><td>数据模型 + 配置类：Issue/PR/Code/Commit/Discussion 结果、SearchConfig（JSON 解析、校验、关键词缓存）</td></tr>
+<tr><td><code>core/scorer.py</code></td><td>评分引擎：共享关键词匹配逻辑 + 各类型独立加分（PR 合并加分、Code 路径加分 等）</td></tr>
+<tr><td><code>core/cache.py</code></td><td>JSON 缓存：原子写入、增量恢复、全 5 类型存取 (to_dict/from_dict 序列化)</td></tr>
+<tr><td><code>core/report.py</code></td><td>报告生成：Markdown 分级展示、执行摘要、全类型 JSON 输出 (format_full_json)</td></tr>
+<tr><td><code>core/cross_ref.py</code></td><td>交叉引用引擎：正则提取 PR body/title、Commit message、Issue body 中的 <code>#N</code> 引用，构建 Issue↔PR、PR↔PR、Commit→PR/Issue 共 5 类关联。自动生成枢纽过滤关系图（PNG）——仅展示 ≥2 条连线的节点，智能三列布局</td></tr>
+<tr><td><code>core/query_builder.py</code></td><td>查询自动构建 + 种子词库合并 (v6.1)：从关键词按 5 轮优先级策略生成 ≤15 条查询模板；根据 <code>topic</code> 匹配种子词库（<code>data/seed_synonyms.json</code>，12 主题 ~150 词）自动补充基线同义词。<strong>AI 只出词，代码出 Query</strong></td></tr>
+</table>
+<h3>搜索器插件</h3>
+<table>
+<tr><th>搜索器</th><th>职责</th></tr>
+<tr><td><code>searchers/issue.py</code></td><td>Issue 搜索 + 两阶段评论获取（Search API → REST API comments）</td></tr>
+<tr><td><code>searchers/pr.py</code></td><td>PR 搜索 + review comments + 关联 issue 检测 + 变更文件列表</td></tr>
+<tr><td><code>searchers/code.py</code></td><td>代码文件搜索 + 代码片段提取（需 token）</td></tr>
+<tr><td><code>searchers/commit.py</code></td><td>Commit 搜索（提交信息匹配）</td></tr>
+<tr><td><code>searchers/discussion.py</code></td><td>Discussion 搜索（通过 api_client.graphql()，含回答 + 回复）</td></tr>
+</table>
+</section>
+
+<!-- ==================== SCORING ==================== -->
+<section id="scoring">
+<h2>评分算法</h2>
+<h3>共享基础规则 (适用于全部 5 种类型)</h3>
+<p>每个结果的最终得分是以下规则<strong>累加</strong>的结果：</p>
+<table>
+<tr><th>规则</th><th>条件</th><th>分值</th><th>说明</th></tr>
+<tr><td>1. 组件匹配</td><td>component 出现在 title+body 合并文本中</td><td>+2.0</td><td>仅在指定 component 时执行</td></tr>
+<tr><td></td><td>component 出现在任一 label 中</td><td>+3.0</td><td>Label 为维护者标注的结构化元数据，可信度高于正文</td></tr>
+<tr><td>2. 关键词匹配</td><td>高权重词作为子串出现在 title+body 中</td><td>+5.0 / 词</td><td rowspan="3">匹配不区分大小写；长词优先（贪心匹配）</td></tr>
+<tr><td></td><td>中权重词命中</td><td>+3.0 / 词</td></tr>
+<tr><td></td><td>低权重词命中</td><td>+1.0 / 词</td></tr>
+<tr><td>3. 标题加分</td><td>已命中的关键词同时出现在 title 中</td><td>+2.0 / 词</td><td>标题命中表示更强的相关性信号</td></tr>
+<tr><td>4. 频率加分</td><td>同一关键词在 title+body 中出现 n 次 (n&ge;2)</td><td>+(n-1)&times;0.3</td><td>每词上限 +2.0</td></tr>
+<tr><td>5. 评论加分</td><td>关键词在评论中命中且未在 title+body 中命中</td><td>+原始权重&times;0.8</td><td>仅对中间分数段 (borderline) 的 Issue/PR（默认 3.0~8.0）</td></tr>
+<tr><td>6. 部分匹配</td><td>≥3 词关键词的前 N-1 词在文本中命中</td><td>+权重&times;0.6</td><td>例: 关键词 "memory access fault"，文本含 "memory access" → +5&times;0.6=3.0。标题加分降为 +1.0</td></tr>
+<tr><td>7. 包含去重</td><td>短词是某个已匹配长词的子串</td><td>跳过短词</td><td>例: "fault" &sub; "page fault"，避免双重计分</td></tr>
+</table>
+
+<h3>类型特有加分</h3>
+<p>在共享基础分之上，每种搜索类型可叠加其特有的加分项：</p>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--accent)">
+<h4 style="margin-top:0;color:var(--accent)">Pull Request 加分</h4>
+<table style="font-size:13px;margin:0">
+<tr><td>已合并 (merged)</td><td style="text-align:right;color:var(--green)">+2.0</td></tr>
+<tr><td>关联的 Issue 含关键词</td><td style="text-align:right;color:var(--green)">+1.5</td></tr>
+<tr><td>变更文件路径含 component</td><td style="text-align:right;color:var(--green)">+1.5</td></tr>
+<tr><td>标题含修复类动词 (fix/resolve/...)</td><td style="text-align:right;color:var(--green)">+1.0</td></tr>
+</table>
+</div>
+<div class="card" style="border-left:3px solid var(--cyan)">
+<h4 style="margin-top:0;color:var(--cyan)">Code 加分</h4>
+<table style="font-size:13px;margin:0">
+<tr><td>文件路径包含 component 名</td><td style="text-align:right;color:var(--green)">+3.0</td></tr>
+<tr><td>关键词出现在文件路径中</td><td style="text-align:right;color:var(--green)">+1.0 / 词</td></tr>
+<tr><td>Code 无传统标题，用<strong>文件路径</strong>替代标题做匹配评分</td><td style="text-align:right;color:var(--text-dim)">替代机制</td></tr>
+</table>
+</div>
+</div>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--orange)">
+<h4 style="margin-top:0;color:var(--orange)">Commit 加分</h4>
+<table style="font-size:13px;margin:0">
+<tr><td>关键词出现在首行摘要 (前 80 字符)</td><td style="text-align:right;color:var(--green)">+1.5</td></tr>
+</table>
+</div>
+<div class="card" style="border-left:3px solid var(--purple)">
+<h4 style="margin-top:0;color:var(--purple)">Discussion 加分</h4>
+<table style="font-size:13px;margin:0">
+<tr><td>关键词同时出现在采纳答案中</td><td style="text-align:right;color:var(--green)">+1.0 / 词</td></tr>
+<tr><td>评论中独有关键词（与 Issue 共享折扣规则）</td><td style="text-align:right;color:var(--text-dim)">&times;0.8</td></tr>
+</table>
+</div>
+</div>
+
+<h3>分级阈值</h3>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--green)"><strong style="color:var(--green)">高度相关</strong> &mdash; score &ge; 8.0<br><span style="font-size:13px;color:var(--text-dim)">典型场景: 命中 2+ 个高权重词，或 1 个高权重词 + 标题加分 + 组件匹配</span></div>
+<div class="card" style="border-left:3px solid var(--orange)"><strong style="color:var(--orange)">中度相关</strong> &mdash; 5.0 &le; score &lt; 8.0<br><span style="font-size:13px;color:var(--text-dim)">典型场景: 仅组件匹配 (5.0)，或 1 个中权重词 + 标题加分</span></div>
+</div>
+<div class="card" style="border-left:3px solid var(--red);max-width:calc(50% - 8px)"><strong style="color:var(--red)">低度相关</strong> &mdash; 3.0 &le; score &lt; 5.0<br><span style="font-size:13px;color:var(--text-dim)">典型场景: 仅 label 匹配 (3.0)，或少量低权重词 + 部分组件匹配</span></div>
+</section>
+
+<!-- ==================== WALKTHROUGH ==================== -->
+<section id="walkthrough">
+<h2>评分 Walkthrough</h2>
+<p>以 <a href="https://github.com/ROCm/rocm-libraries/issues/265">#265</a> 为例，使用<strong>扩展关键词配置</strong>逐条拆解评分规则的作用过程。下方关键词配置比实际搜索更丰富（实际搜索中该 Issue 得分为 12.3），目的是演示更多评分规则。</p>
+
+<div class="card" style="margin-bottom:24px">
+<h4 style="margin-top:0">#265 Issue 信息</h4>
+<p style="font-size:13px;margin-bottom:4px"><strong>标题:</strong> <code>[Issue]: Memory access fault by GPU node-2 (Agent handle: 0x3596e2c0) on address 0x7f9de440f000. Reason: Write access to a read-only page.</code></p>
+<p style="font-size:13px;margin-bottom:4px"><strong>Labels:</strong> <code>project: hipblaslt</code></p>
+<p style="font-size:13px;margin-bottom:0"><strong>Body 摘要:</strong> <code>...after building hipBLASLt library. Memory access fault by GPU node-2 (Agent handle: 0x3596e2c0)...</code></p>
+</div>
+
+<div class="wt-steps">
+<div class="wt-step">
+<div class="wt-label"><strong>组件匹配 (title+body)</strong><br><span style="font-size:13px;color:var(--text-dim)">title+body 合并文本中包含 <code>"hipblaslt"</code>（出现在 body 部分）&rarr; 命中</span>
+<div class="wt-running">累计: 0.0 + 2.0 = 2.0</div></div>
+<div class="wt-score">+2.0</div>
+</div>
+
+<div class="wt-step">
+<div class="wt-label"><strong>组件匹配 (label)</strong><br><span style="font-size:13px;color:var(--text-dim)">Labels 包含 <code>"project: hipblaslt"</code> &rarr; 命中</span>
+<div class="wt-running">累计: 2.0 + 3.0 = 5.0</div></div>
+<div class="wt-score">+3.0</div>
+</div>
+
+<div class="wt-step">
+<div class="wt-label"><strong>高权重词: "memory access fault"</strong><br><span style="font-size:13px;color:var(--text-dim)">在 title+body 合并文本中匹配到 (+5.0)，且该词也出现在标题中，触发标题加分 (+2.0)</span>
+<div class="wt-running">累计: 5.0 + 5.0 + 2.0 = 12.0</div></div>
+<div class="wt-score">+7.0</div>
+</div>
+
+<div class="wt-step">
+<div class="wt-label"><strong>中权重词: "read-only page"</strong><br><span style="font-size:13px;color:var(--text-dim)">在 title+body 合并文本中匹配到 (+3.0)，且出现在标题 "...a read-only page." 中 (+2.0)</span>
+<div class="wt-running">累计: 12.0 + 3.0 + 2.0 = 17.0</div></div>
+<div class="wt-score">+5.0</div>
+</div>
+
+<div class="wt-step">
+<div class="wt-label"><strong>低权重词: "write access to a read-only"</strong><br><span style="font-size:13px;color:var(--text-dim)">在 title+body 合并文本中匹配到 (+1.0) + 出现在标题中 (+2.0)。注意：本词与 "read-only page" 共享 "read-only" 子串，但二者互不包含，去重规则不生效，独立计分。</span>
+<div class="wt-running">累计: 17.0 + 1.0 + 2.0 = 20.0</div></div>
+<div class="wt-score">+3.0</div>
+</div>
+
+<div class="wt-step">
+<div class="wt-label"><strong>低权重词: "gpu node"</strong><br><span style="font-size:13px;color:var(--text-dim)">在 title+body 合并文本中匹配到 (+1.0)，且出现在标题 "...GPU node-2..." 中 (+2.0)</span>
+<div class="wt-running">累计: 20.0 + 1.0 + 2.0 = 23.0</div></div>
+<div class="wt-score">+3.0</div>
+</div>
+
+<div class="wt-step">
+<div class="wt-label"><strong>低权重词: "agent handle"</strong><br><span style="font-size:13px;color:var(--text-dim)">在 title+body 合并文本中匹配到 (+1.0)，且出现在标题 "...(Agent handle: 0x3596e2c0)..." 中 (+2.0)</span>
+<div class="wt-running">累计: 23.0 + 1.0 + 2.0 = 26.0</div></div>
+<div class="wt-score">+3.0</div>
+</div>
+</div>
+
+<div class="wt-total">
+<div class="wt-verdict">5 个关键词命中 + 全部在标题中<br>= 高度相关（扩展配置）</div>
+<div class="wt-sum">26.0</div>
+</div>
+
+<h3 style="margin-top:32px">对比: #3211 (score: 10.0)</h3>
+<p style="font-size:13px;color:var(--text-dim)">这是最初被 GitHub 精确搜索 "page fault" 遗漏的 issue &mdash; 标题和 body 中均未出现 "page fault"，但 body 中包含了同义词 <code>"illegal memory access"</code>：</p>
+<div class="card">
+<table style="margin:0">
+<tr><th>规则</th><th>匹配</th><th>分值</th></tr>
+<tr><td>组件 (title+body)</td><td>"hipblaslt" 出现在合并文本中</td><td>+2.0</td></tr>
+<tr><td>组件 (label)</td><td>label 包含 "project: hipblaslt"</td><td>+3.0</td></tr>
+<tr><td>高权重词</td><td>"illegal memory access" 在 title+body 中命中（出现在 body 部分）</td><td>+5.0</td></tr>
+<tr><td colspan="2" style="text-align:right;font-weight:700">合计</td><td style="font-weight:700;color:var(--green)">10.0</td></tr>
+</table>
+<p style="font-size:13px;color:var(--text-dim);margin:12px 0 0">"illegal memory access" 仅出现在 body 中、不在标题中 &rarr; 无标题加分。但作为<strong>高权重词 (+5)</strong>，加上组件匹配 (+5)，单个关键词即达到高度相关阈值 (&ge;8.0)。此即<strong>同义词扩展</strong>的作用 &mdash; 若仅搜索 "page fault"，此 issue 不会被发现。</p>
+</div>
+</section>
+
+<!-- ==================== DECISION TREE ==================== -->
+<section id="decision">
+<h2>决策树: 该用哪些参数？</h2>
+<p>根据搜索场景，沿决策树选择参数组合。</p>
+
+<table>
+<tr><th style="width:220px">场景问题</th><th>是</th><th>否</th></tr>
+<tr><td>需要搜索多种类型？</td><td>config 中 <code>"search_types": ["issues","prs","code","commits","discussions"]</code></td><td>不加 (默认仅搜索 issues)</td></tr>
+<tr><td>知道具体组件名？</td><td><code>--component hipblaslt</code></td><td>留空 (全仓库搜索)</td></tr>
+<tr><td>只看未解决的 issue？</td><td><code>--state open</code></td><td>不加 (显示全部)</td></tr>
+<tr><td>限定创建时间范围？</td><td><code>--date-from 2024-01-01</code> 和/或 <code>--date-to 2025-12-31</code></td><td>不加 (不限时间)</td></tr>
+<tr><td>需要搜索评论？</td><td><code>--search-comments</code></td><td>不加 (只搜 title+body)</td></tr>
+<tr><td>关键词很多/多轮调优？</td><td><code>--cache-file .cache.json</code></td><td>不加 (一次性搜索)</td></tr>
+<tr><td>从上次搜索继续？</td><td>加 <code>--resume</code></td><td>不加 (全新搜索)</td></tr>
+<tr><td>想先预览不执行？</td><td><code>--dry-run</code></td><td>不加 (立即搜索)</td></tr>
+<tr><td>有已知误报？</td><td>config 中 <code>"exclude_issues"</code></td><td>留空数组 <code>[]</code></td></tr>
+<tr><td>报告过长或组件噪声多？</td><td><code>--max-component 5</code> (或 0 完全隐藏)</td><td>默认 10</td></tr>
+<tr><td>只通过命令行指定关键词？</td><td><code>--keywords "page fault" "sigsegv"</code></td><td>通过 config.json 指定</td></tr>
+<tr style="background:rgba(59,185,80,.04)"><td>需要 AI 过滤噪声？ (v6)</td><td><code>--intermediate-json intermediate.json</code></td><td>不加 (不启用 Smart)</td></tr>
+<tr style="background:rgba(59,185,80,.04)"><td>需要退回串行模式？ (v6)</td><td><code>--no-parallel</code></td><td>不加 (默认并行)</td></tr>
+<tr style="background:rgba(59,185,80,.04)"><td>AI 调用，不想要日志？ (v6)</td><td><code>-q</code></td><td>不加 (默认 INFO)</td></tr>
+</table>
+
+<h3>推荐组合速查</h3>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--green)">
+<h4 style="margin-top:0;color:var(--green)">快速 Issue 搜索 (1 分钟)</h4>
+<pre style="margin:8px 0 0"><code>python search_github.py \
+  --config config.json -o results.md</code></pre>
+</div>
+<div class="card" style="border-left:3px solid var(--accent)">
+<h4 style="margin-top:0;color:var(--accent)">Issue + PR (3 分钟)</h4>
+<pre style="margin:8px 0 0"><code>python search_github.py \
+  --config config.json -o results.md \
+  --search-comments</code></pre>
+<p style="font-size:12px;color:var(--text-dim);margin:6px 0 0">config 中: <code>"search_types": ["issues", "prs"]</code></p>
+</div>
+</div>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--orange)">
+<h4 style="margin-top:0;color:var(--orange)">全类型深度搜索 (v6 并行 ~1 分钟)</h4>
+<pre style="margin:8px 0 0"><code>python search_github.py \
+  --config config.json -o results.md \
+  --search-comments \
+  --max-component 5 \
+  --cache-file .cache.json</code></pre>
+<p style="font-size:12px;color:var(--text-dim);margin:6px 0 0">config 中: <code>"search_types": ["issues","prs","code","commits","discussions"]</code>。v6 默认并行执行。</p>
+</div>
+<div class="card" style="border-left:3px solid var(--purple)">
+<h4 style="margin-top:0;color:var(--purple)">增量调优 (10 秒)</h4>
+<pre style="margin:8px 0 0"><code>python search_github.py \
+  --config config_v2.json -o results.md \
+  --search-comments \
+  --cache-file .cache.json --resume</code></pre>
+</div>
+</div>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--green)">
+<h4 style="margin-top:0;color:var(--green)">Smart 精准搜索 (v6)</h4>
+<pre style="margin:8px 0 0"><code>python search_github.py \
+  --config config.json -q \
+  --intermediate-json intermediate.json \
+  --cache-file .cache.json -o r1.md</code></pre>
+<p style="font-size:12px;color:var(--text-dim);margin:6px 0 0">AI 审阅 intermediate.json 后，续:
+<code>--resume --score-overrides ai.json -o r2.md</code></p>
+</div>
+<div class="card" style="border-left:3px solid var(--cyan)">
+<h4 style="margin-top:0;color:var(--cyan)">Smart + 二轮补搜 (v6)</h4>
+<pre style="margin:8px 0 0"><code>python search_github.py \
+  --config config.json \
+  --cache-file .cache.json --resume \
+  --score-overrides ai.json \
+  --append-queries "new query" -o r3.md</code></pre>
+</div>
+</div>
+</section>
+
+
+<!-- ==================== TUTORIAL 1 ==================== -->
+<section id="tut-1">
+<h2>教程 1: 基础搜索</h2>
+<p>最简单的用法：一个配置文件 + 一条命令。</p>
+<div class="tabs"><div class="tab active" data-tab="t1c">config.json</div><div class="tab" data-tab="t1m">命令</div><div class="tab" data-tab="t1l">运行日志</div></div>
+<div class="tc active" id="t1c">
+<pre><code>{
+  <span class="str">"repo"</span>: <span class="str">"ROCm/rocm-libraries"</span>,
+  <span class="str">"component"</span>: <span class="str">"hipblaslt"</span>,
+  <span class="str">"topic"</span>: <span class="str">"page fault"</span>,
+  <span class="str">"keywords"</span>: {
+    <span class="str">"high"</span>:   [<span class="str">"page fault"</span>, <span class="str">"memory access fault"</span>, <span class="str">"illegal memory access"</span>],
+    <span class="str">"medium"</span>: [<span class="str">"sigsegv"</span>, <span class="str">"segmentation fault"</span>],
+    <span class="str">"low"</span>:    [<span class="str">"gpu hang"</span>, <span class="str">"core dump"</span>]
+  },
+  <span class="str">"queries"</span>: [
+    <span class="str">"hipblaslt \"page fault\""</span>,
+    <span class="str">"hipblaslt \"memory access fault\" OR \"illegal memory access\""</span>,
+    <span class="str">"hipblaslt \"segmentation fault\" OR \"sigsegv\""</span>
+  ]
+}</code></pre>
+</div>
+<div class="tc" id="t1m">
+<pre><code>python .cursor/skills/github-issue-search/scripts/search_github.py \
+  --config search_config.json --output results.md</code></pre>
+<p style="font-size:13px;color:var(--text-dim);margin-top:8px"><code>--config</code> JSON 配置，<code>--output</code> 输出 Markdown</p>
+</div>
+<div class="tc" id="t1l">
+<p style="font-size:12px;color:var(--text-dim);margin-bottom:4px">以下日志基于真实输出格式示意，完整结果见<a href="#tut-5">教程 5</a>。</p>
+<div class="lo">
+<span class="ph">============================================================</span>
+<span class="ph"> 阶段 1: 搜索 title + body</span>
+<span class="ph">============================================================</span>
+ 仓库: ROCm/rocm-libraries | 组件: hipblaslt | 查询数: 3
+
+  [1/3] hipblaslt "page fault" &rarr; <span class="nu">3</span> 结果, <span class="ok">3</span> 新
+  [2/3] hipblaslt "memory access fault"... &rarr; <span class="nu">5</span> 结果, <span class="ok">4</span> 新
+  [3/3] hipblaslt "segmentation fault"... &rarr; <span class="nu">8</span> 结果, <span class="ok">6</span> 新
+
+  阶段 1 完成: <span class="nu">13</span> 个唯一 issues
+  评分后: <span class="nu">9</span> 个达标 (score &ge; 3.0)，<span class="nu">2</span> 个高度相关
+</div>
+</div>
+</section>
+
+<!-- ==================== TUTORIAL 2 ==================== -->
+<section id="tut-2">
+<h2>教程 2: 带过滤条件</h2>
+<p>只搜索 2024-01-01 及之后创建的、状态为 open 的 issue，并排除已知误报。</p>
+<div class="tabs"><div class="tab active" data-tab="t2c">config.json</div><div class="tab" data-tab="t2m">命令</div></div>
+<div class="tc active" id="t2c">
+<pre><code>{
+  "repo": "ROCm/rocm-libraries",
+  "component": "hipblaslt",
+  <span class="cmt">// 过滤条件</span>
+  "filters": { "state": "open", "date_from": "2024-01-01" },
+  <span class="cmt">// 排除已知误报</span>
+  "exclude_issues": [1234],
+  "keywords": { <span class="cmt">/* ... */</span> },
+  "queries": [ <span class="cmt">/* ... */</span> ]
+}</code></pre>
+<p style="font-size:13px;color:var(--text-dim);margin-top:8px">过滤分两层执行：<strong>API 层</strong>追加 <code>is:open created:&gt;=2024-01-01</code>，<strong>本地层</strong>二次过滤</p>
+</div>
+<div class="tc" id="t2m">
+<pre><code><span class="cmt"># CLI 参数覆盖配置文件</span>
+python search_github.py --config config.json \
+  --state open --date-from 2024-06-01 --output results.md</code></pre>
+</div>
+</section>
+
+<!-- ==================== TUTORIAL 3 ==================== -->
+<section id="tut-3">
+<h2>教程 3: 两阶段 Comments 搜索</h2>
+<p>启用 <code>--search-comments</code> 后，工具对分数处于 <code>comments-low</code> ~ <code>comments-high</code> 区间的 Issue 获取全部评论，并在评论文本中搜索关键词。评论中独有的命中词（title+body 未出现）按原权重 &times;0.8 计入总分。</p>
+<div class="tabs"><div class="tab active" data-tab="t3m">命令</div><div class="tab" data-tab="t3l">运行日志</div><div class="tab" data-tab="t3e">策略解析</div></div>
+<div class="tc active" id="t3m">
+<pre><code>python search_github.py --config config.json \
+  --search-comments --comments-low 3.0 --comments-high 8.0 --output results.md</code></pre>
+<p style="font-size:13px;color:var(--text-dim);margin-top:8px"><code>--comments-low</code>/<code>--comments-high</code> 控制获取评论的分数区间</p>
+</div>
+<div class="tc" id="t3l">
+<p style="font-size:12px;color:var(--text-dim);margin-bottom:4px">以下日志基于<a href="#tut-5">教程 5</a> 的真实搜索数据（82 个 Issues、42 个中间分数段），评论获取详情为格式示意。</p>
+<div class="lo">
+  阶段 1 完成: <span class="nu">82</span> 个唯一 issues
+
+<span class="ph"> 阶段 2: 搜索 comments</span>
+ 待搜索: <span class="nu">42</span> 个 (score 3.0~8.0) | 并发: <span class="nu">4</span>
+
+  [1/42] #2617 &rarr; <span class="nu">2847</span> 字, <span class="ok">1</span> 关键词命中
+  [3/42] #3110 &rarr; <span class="nu">5231</span> 字, <span class="ok">3</span> 关键词命中
+  <span class="cmt">... (省略)</span>
+
+<span class="ph"> 搜索完成!</span>
+   总搜索: <span class="nu">82</span> | 相关: <span class="nu">49</span> | 高度相关: <span class="nu">7</span>
+</div>
+</div>
+<div class="tc" id="t3e">
+<div class="dc">
+<div class="fd" style="flex-wrap:wrap;gap:8px;justify-content:flex-start">
+<div class="fb fb-r" style="min-width:180px">评分 1<small>82 个 issues</small></div><span class="fa">&rarr;</span>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div class="fb" style="background:#1a3a2a;color:var(--green);border:1px solid var(--green);padding:8px 16px;font-size:12px">score &ge; 8.0 &rarr; 跳过 (7)</div>
+<div class="fb" style="background:#3a2a1a;color:var(--orange);border:1px solid var(--orange);padding:8px 16px;font-size:12px">3.0~8.0 &rarr; 获取评论 (42)</div>
+<div class="fb" style="background:#3a1a1a;color:var(--red);border:1px solid var(--red);padding:8px 16px;font-size:12px">score &lt; 3.0 &rarr; 跳过 (33)</div>
+</div><span class="fa">&rarr;</span>
+<div class="fb fb-r" style="min-width:180px">评分 2<small>含 comments</small></div>
+</div>
+</div>
+<p style="font-size:13px;color:var(--text-dim)">本例中，全量获取评论需 82 次 API 调用，仅获取中间分数段则为 42 次，节省近半配额。高分结果无需补充证据，低分结果补充后仍难达标。</p>
+</div>
+</section>
+
+<!-- ==================== TUTORIAL 4 ==================== -->
+<section id="tut-4">
+<h2>教程 4: 缓存与增量搜索</h2>
+<h3>第一次搜索</h3>
+<pre><code>python search_github.py --config config_v1.json \
+  --search-comments --cache-file .cache.json --output results_v1.md</code></pre>
+<h3>增量搜索</h3>
+<pre><code><span class="cmt"># 添加了新关键词后</span>
+python search_github.py --config config_v2.json \
+  --search-comments --cache-file .cache.json <span class="kw">--resume</span> --output results_v2.md</code></pre>
+<p style="font-size:12px;color:var(--text-dim)">以下日志为格式示意，展示增量搜索时缓存恢复与跳过逻辑。缓存支持全 5 种类型（Issues / PRs / Code / Commits / Discussions），v6 并行模式下通过 <code>threading.Lock</code> 保护写入。</p>
+<div class="lo">
+<span class="ok">[缓存] 恢复 82 个 issues, 15 个 PRs, 8 个 code results</span>
+  [2/15] hipblaslt "signal 11" OR "SIGBUS" &rarr; <span class="ok">2</span> 新 issues
+  跳过已缓存评论: <span class="nu">42</span> 个
+<span class="ok">[缓存] 已保存 84 个 issues, 15 个 PRs, 8 个 code results</span>
+</div>
+<div class="card"><h4>增量搜索行为 (全类型)</h4>
+<table>
+<tr><th>数据</th><th>行为</th></tr>
+<tr><td>已收集的结果 (Issues / PRs / Code / Commits / Discussions)</td><td>按类型分段复用缓存</td></tr>
+<tr><td>已获取评论的 Issues / PRs</td><td>不重新拉取</td></tr>
+<tr><td>新查询匹配的结果</td><td>增量搜索并合并到对应类型段</td></tr>
+<tr><td>全部结果的评分</td><td>使用<strong>当前配置中的关键词列表</strong>全部重新计算（含已缓存结果）</td></tr>
+</table></div>
+</section>
+
+<!-- ==================== TUTORIAL 5 ==================== -->
+<section id="tut-5">
+<h2>教程 5: 全功能真实示例</h2>
+<p>搜索 <code>ROCm/rocm-libraries</code> 中 <code>hipblaslt page fault</code> 相关 issue &mdash; <strong>真实数据</strong>，搜索时间 2026-02-07。</p>
+<p style="font-size:13px;color:var(--text-dim)">本教程展示 Issue 搜索。还支持在配置中添加 <code>"search_types": ["issues", "prs", "code"]</code> 同时搜索多种类型（v6 自动并行），参见<a href="#ai-interaction">场景 6</a>。需要 AI 过滤噪声，参见<a href="#tut-smart">教程 8</a>。</p>
+
+<details>
+<summary>完整配置文件 (5H + 9M + 22L 关键词；queries 可省略，由代码自动构建)</summary>
+<div class="db"><pre><code>{
+  <span class="str">"repo"</span>: <span class="str">"ROCm/rocm-libraries"</span>,
+  <span class="str">"component"</span>: <span class="str">"hipblaslt"</span>,
+  <span class="str">"topic"</span>: <span class="str">"page fault"</span>,
+  <span class="str">"filters"</span>: { <span class="str">"state"</span>: <span class="str">""</span>, <span class="str">"date_from"</span>: <span class="str">""</span>, <span class="str">"date_to"</span>: <span class="str">""</span> },
+  <span class="str">"exclude_issues"</span>: [],
+  <span class="str">"keywords"</span>: {
+    <span class="str">"high"</span>: [
+      <span class="str">"page fault"</span>, <span class="str">"memory access fault"</span>, <span class="str">"illegal memory access"</span>,
+      <span class="str">"segmentation fault"</span>, <span class="str">"protection fault"</span>
+    ],
+    <span class="str">"medium"</span>: [
+      <span class="str">"sigsegv"</span>, <span class="str">"sigbus"</span>, <span class="str">"segfault"</span>, <span class="str">"page not present"</span>,
+      <span class="str">"read-only page"</span>, <span class="str">"gpu hang"</span>, <span class="str">"gpu reset"</span>,
+      <span class="str">"gpu fault"</span>, <span class="str">"illegal address"</span>
+    ],
+    <span class="str">"low"</span>: [
+      <span class="str">"page table"</span>, <span class="str">"memory access violation"</span>,
+      <span class="str">"memory access error"</span>, <span class="str">"illegal instruction"</span>,
+      <span class="str">"signal 11"</span>, <span class="str">"signal 7"</span>,
+      <span class="str">"protection_fault"</span>, <span class="str">"l2_protection_fault"</span>,
+      <span class="str">"gcvm_l2_protection_fault"</span>, <span class="str">"utcl2"</span>,
+      <span class="str">"write access to a read-only"</span>, <span class="str">"supervisor privilege"</span>,
+      <span class="str">"gpu node"</span>, <span class="str">"out of bounds"</span>, <span class="str">"out-of-bounds"</span>,
+      <span class="str">"abort"</span>, <span class="str">"core dump"</span>, <span class="str">"coredump"</span>,
+      <span class="str">"amdgpu: page fault"</span>, <span class="str">"agent handle"</span>,
+      <span class="str">"mes failed"</span>, <span class="str">"unrecoverable state"</span>
+    ]
+  },
+  <span class="str">"queries"</span>: [
+    <span class="str">"{component} \"page fault\""</span>,
+    <span class="str">"{component} \"memory access fault\""</span>,
+    <span class="str">"{component} \"illegal memory access\""</span>,
+    <span class="str">"{component} \"segmentation fault\" OR \"protection fault\""</span>,
+    <span class="str">"{component} \"sigsegv\" OR \"sigbus\" OR \"segfault\""</span>,
+    <span class="str">"{component} \"page not present\" OR \"read-only page\" OR \"gpu fault\""</span>,
+    <span class="str">"{component} \"gpu hang\" OR \"gpu reset\" OR \"illegal address\""</span>,
+    <span class="str">"{component} \"memory access violation\" OR \"memory access error\" OR \"illegal instruction\""</span>,
+    <span class="str">"{component} \"signal 11\" OR \"signal 7\" OR \"core dump\""</span>,
+    <span class="str">"{component} \"gcvm_l2_protection_fault\" OR \"l2_protection_fault\" OR \"utcl2\""</span>,
+    <span class="str">"{component} \"write access to a read-only\" OR \"agent handle\" OR \"supervisor privilege\""</span>,
+    <span class="str">"label:\"project: {component}\" \"page fault\" OR \"memory access fault\" OR \"segmentation fault\""</span>,
+    <span class="str">"label:\"project: {component}\" \"gpu hang\" OR \"segfault\" OR \"illegal memory access\""</span>
+  ]
+}</code></pre>
+<p style="font-size:12px;color:var(--text-dim);margin:8px 0 0"><strong>v6.1 提示：</strong><code>queries</code> 字段现在<strong>可以省略</strong>。脚本会根据关键词自动按 5 轮策略生成 &le;15 条查询（R1 高权独立 → R2 高权 OR → R3 中权配对 → R4 跨层组合 → R5 低权分组）。同时，种子词库会根据 <code>topic</code> 自动补充基线同义词（如 "page fault" 可自动获得 sigsegv、sigbus、core dump 等 14 个补充词）。</p>
+</div>
+</details>
+
+<details open>
+<summary>真实搜索结果 &mdash; Top 7 高度相关 Issues (score &ge; 8.0)</summary>
+<div class="db"><table>
+<tr><th>#</th><th>Issue</th><th>Score</th><th>状态</th><th>匹配关键词</th></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/265">#265</a></td><td>Memory access fault by GPU node-2</td><td><strong style="color:var(--green)">26.0</strong></td><td style="color:var(--green)">open</td><td><code>memory access fault</code> <code>agent handle</code> <code>gpu node</code> <code>read-only page</code> <code>write access to a read-only</code></td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/1132">#1132</a></td><td>Strix Halo / gfx1151 GPU hangs</td><td><strong style="color:var(--green)">19.0</strong></td><td style="color:var(--red)">closed</td><td><code>page fault</code> <code>gcvm_l2_protection_fault</code> <code>gpu hang</code> <code>gpu reset</code> <code>mes failed</code> +4</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/4128">#4128</a></td><td>hipblasLtMatmulAlgoGetHeuristic SIGSEGV</td><td><strong style="color:var(--green)">14.0</strong></td><td style="color:var(--green)">open</td><td><code>segmentation fault</code> <code>sigsegv</code></td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/3110">#3110</a></td><td>MIOpen(HIP): Error [Prefetch]</td><td><strong style="color:var(--green)">13.0</strong></td><td style="color:var(--green)">open</td><td><code>memory access fault</code> <code>agent handle</code> <code>gpu node</code> <code>page not present</code> <code>supervisor privilege</code></td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/3981">#3981</a></td><td>tensilelite-client segfault</td><td><strong style="color:var(--green)">12.0</strong></td><td style="color:var(--green)">open</td><td><code>segfault</code> <code>segmentation fault</code></td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/3211">#3211</a></td><td>[hipblaslt][gfx12] Expert Scheduling</td><td><strong style="color:var(--green)">10.0</strong></td><td style="color:var(--green)">open</td><td><code>illegal memory access</code></td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/3869">#3869</a></td><td>tensilelite-client segfault (ICacheFlush)</td><td><strong style="color:var(--green)">9.0</strong></td><td style="color:var(--green)">open</td><td><code>segmentation fault</code></td></tr>
+</table>
+<p style="font-size:13px;color:var(--text-dim);margin:12px 0 0">共搜索 <strong>82</strong> 个，<strong>49</strong> 个达标 (score &ge; 3.0)，<strong>7</strong> 个高度相关。<code>#3211</code> 未提及 "page fault"，但包含同义词 "illegal memory access" &mdash; 同义词扩展的典型收益。</p>
+</div>
+</details>
+
+<details>
+<summary>中度相关 &mdash; 41 个 (score 5.0~7.0)</summary>
+<div class="db">
+<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px">其中 <strong>1 个</strong>通过关键词匹配发现 (#2617, score 7.0 - segmentation fault)，<strong>40 个</strong>仅通过组件匹配 (score 5.0)。</p>
+<table style="font-size:13px">
+<tr><th>#</th><th>Score</th><th>关键词</th><th>说明</th></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/2617">#2617</a></td><td>7.0</td><td><code>segmentation fault</code></td><td>MIOpen runtime 编译错误附带 segfault</td></tr>
+<tr><td colspan="4" style="color:var(--text-dim);font-style:italic;text-align:center">&mdash; 以下 40 个 issue 仅通过 label "project: hipblaslt" 匹配 (score=5.0)，无关键词命中 &mdash;</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/3201">#3201</a></td><td>5.0</td><td>&mdash;</td><td>HIPBLASLT_ENABLE_OPENMP=OFF is broken</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/2432">#2432</a></td><td>5.0</td><td>&mdash;</td><td>Replicate hipblaslt specific test</td></tr>
+<tr><td colspan="4" style="color:var(--text-dim);text-align:center">... 共 40 个 hipblaslt 组件 issue (完整列表见 search_results.md)</td></tr>
+</table>
+</div>
+</details>
+
+<details>
+<summary>低度相关 &mdash; 1 个 (score 3.0)</summary>
+<div class="db">
+<table style="font-size:13px">
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/2528">#2528</a></td><td>3.0</td><td><code>abort</code></td><td>Tensile crashed when running multiple benchmark iterations</td></tr>
+</table>
+</div>
+</details>
+</section>
+
+<!-- ==================== TUTORIAL DRY-RUN ==================== -->
+<section id="tut-dry">
+<h2>教程 6: Dry-Run 预览</h2>
+<p>在正式搜索前，用 <code>--dry-run</code> 预览所有即将发送的 API 查询，不消耗任何 API 配额。</p>
+<pre><code>python search_github.py --config search_config.json --dry-run</code></pre>
+<h3>真实输出 (使用上方教程 5 的配置)</h3>
+<div class="lo">
+<span class="ph">============================================================</span>
+<span class="ph"> DRY-RUN 预览 (不执行搜索)</span>
+<span class="ph">============================================================</span>
+ 仓库: ROCm/rocm-libraries
+ 组件: hipblaslt
+ 主题: page fault
+ 状态: 全部
+
+ 关键词 (<span class="nu">5</span>H + <span class="nu">9</span>M + <span class="nu">22</span>L):
+   高: page fault, memory access fault, illegal memory access, segmentation fault, protection fault
+   中: sigsegv, sigbus, segfault, page not present, read-only page, gpu hang, gpu reset, gpu fault, illegal address
+   低: page table, memory access violation, memory access error, illegal instruction, signal 11, signal 7,
+       protection_fault, l2_protection_fault, gcvm_l2_protection_fault, utcl2,
+       write access to a read-only, supervisor privilege, gpu node, out of bounds, out-of-bounds,
+       abort, core dump, coredump, amdgpu: page fault, agent handle, mes failed, unrecoverable state
+
+ 将发送的查询 (<span class="nu">13</span> 条):
+   [<span class="nu">1</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "page fault"
+   [<span class="nu">2</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "memory access fault"
+   [<span class="nu">3</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "illegal memory access"
+   [<span class="nu">4</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "segmentation fault" OR "protection fault"
+   [<span class="nu">5</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "sigsegv" OR "sigbus" OR "segfault"
+   [<span class="nu">6</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "page not present" OR "read-only page" OR "gpu fault"
+   [<span class="nu">7</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "gpu hang" OR "gpu reset" OR "illegal address"
+   [<span class="nu">8</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "memory access violation" OR "memory access error" OR "illegal instruction"
+   [<span class="nu">9</span>]  repo:ROCm/rocm-libraries is:issue hipblaslt "signal 11" OR "signal 7" OR "core dump"
+   [<span class="nu">10</span>] repo:ROCm/rocm-libraries is:issue hipblaslt "gcvm_l2_protection_fault" OR "l2_protection_fault" OR "utcl2"
+   [<span class="nu">11</span>] repo:ROCm/rocm-libraries is:issue hipblaslt "write access to a read-only" OR "agent handle" OR "supervisor privilege"
+   [<span class="nu">12</span>] repo:ROCm/rocm-libraries is:issue label:"project: hipblaslt" "page fault" OR "memory access fault" OR "segmentation fault"
+   [<span class="nu">13</span>] repo:ROCm/rocm-libraries is:issue label:"project: hipblaslt" "gpu hang" OR "segfault" OR "illegal memory access"
+
+<span class="ph">============================================================</span>
+<span class="ph"> 使用 --dry-run 确认后，去掉该参数即可执行搜索</span>
+<span class="ph">============================================================</span>
+</div>
+<div class="card">
+<h4 style="margin-top:0">Dry-Run 可检出的问题</h4>
+<ul style="font-size:13px">
+<li><strong>重复查询</strong> &mdash; 输出标记 <code>(重复)</code>，便于去除冗余查询、节省 API 配额</li>
+<li><strong>配置错误</strong> &mdash; 日期格式不合法、<code>state</code> 值无效等问题会在运行前提前报错</li>
+<li><strong>关键词覆盖</strong> &mdash; 通过 H/M/L 数量判断同义词覆盖是否充分</li>
+<li><strong>查询策略</strong> &mdash; 确认 <code>{component}</code> 占位符是否正确替换</li>
+</ul></div>
+</section>
+
+<!-- ==================== TUTORIAL 7: MULTI-TYPE ==================== -->
+<section id="tut-multi">
+<h2>教程 7: 多类型搜索</h2>
+<p>一次搜索同时覆盖 Issues、PRs、Code、Commits、Discussions 五种内容类型。v6 默认<strong>并行执行</strong>各搜索器。</p>
+
+<h3>Step 1: 配置文件</h3>
+<p>在 <code>search_config.json</code> 中添加 <code>search_types</code> 字段：</p>
+<pre><code>{
+  <span class="str">"repo"</span>: <span class="str">"ROCm/rocm-libraries"</span>,
+  <span class="str">"component"</span>: <span class="str">"hipblaslt"</span>,
+  <span class="str">"topic"</span>: <span class="str">"page fault"</span>,
+  <span class="str">"search_types"</span>: [<span class="str">"issues"</span>, <span class="str">"prs"</span>, <span class="str">"code"</span>],
+  <span class="str">"keywords"</span>: {
+    <span class="str">"high"</span>: [<span class="str">"page fault"</span>, <span class="str">"memory access fault"</span>],
+    <span class="str">"medium"</span>: [<span class="str">"sigsegv"</span>, <span class="str">"segfault"</span>],
+    <span class="str">"low"</span>: [<span class="str">"core dump"</span>, <span class="str">"gpu hang"</span>]
+  },
+  <span class="str">"queries"</span>: [
+    <span class="str">"{component} \"page fault\""</span>,
+    <span class="str">"{component} \"memory access fault\" OR \"illegal memory access\""</span>,
+    <span class="str">"{component} \"sigsegv\" OR \"segfault\""</span>
+  ]
+}</code></pre>
+<p style="font-size:13px;color:var(--text-dim)">不指定 <code>search_types</code> 时默认仅搜索 Issues。<code>code</code> 和 <code>discussions</code> 需要 Token。</p>
+
+<h3>Step 2: 执行搜索</h3>
+<pre><code>python search_github.py --config search_config.json \
+  --search-comments --cache-file .cache.json -o results.md</code></pre>
+<p style="font-size:13px;color:var(--text-dim)">也可以通过命令行覆盖类型：<code>--search-types issues prs code commits discussions</code></p>
+
+<h3>Step 3: 查看输出</h3>
+<div class="lo">
+<span class="ph">============================================================</span>
+<span class="ph"> GitHub Semantic Search v6</span>
+<span class="ph">============================================================</span>
+ 仓库: ROCm/rocm-libraries | 组件: hipblaslt | 主题: page fault
+ 模式: <span class="ok">并行</span> (3 搜索器)
+
+<span class="ok">[issues]</span>  完成 (12.3s) &mdash; 3 条查询 &rarr; <span class="nu">42</span> 个 issues, <span class="ok">8</span> 个关键词匹配
+<span class="ok">[prs]</span>    完成 (14.1s) &mdash; 3 条查询 &rarr; <span class="nu">28</span> 个 PRs, <span class="ok">3</span> 个关键词匹配
+<span class="ok">[code]</span>   完成 (8.7s)  &mdash; 3 条查询 &rarr; <span class="nu">15</span> 个文件, <span class="ok">12</span> 个关键词匹配
+
+<span class="ph">摘要:</span>
+  Issues:   <span class="nu">8</span> 关键词匹配 + <span class="nu">34</span> 仅组件 | 最高分 <span class="ok">26.0</span>
+  PRs:      <span class="nu">3</span> 关键词匹配 + <span class="nu">25</span> 仅组件 | 最高分 <span class="ok">15.0</span>
+  Code:     <span class="nu">12</span> 关键词匹配 + <span class="nu">3</span> 仅组件  | 最高分 <span class="ok">12.0</span>
+
+<span class="ph">交叉引用:</span>
+  PR #1892 &rarr; fixes Issue #1601
+  Commit abc1234 &rarr; refs Issue #1601, PR #1892
+
+<span class="ok">[缓存] 已保存到 .cache.json (线程安全写入)</span>
+</div>
+
+<h3>各类型差异对比</h3>
+<table>
+<tr><th>类型</th><th>查询关键字</th><th>特殊评分</th><th>需要 Token</th></tr>
+<tr><td>Issues</td><td><code>is:issue</code></td><td>两阶段 comments (+0.8x)</td><td>推荐</td></tr>
+<tr><td>PRs</td><td><code>is:pr</code></td><td>合并 +2.0, 关联 issue +1.5, 文件匹配 +1.5</td><td>推荐</td></tr>
+<tr><td>Code</td><td>直接搜索文件内容</td><td>组件路径 +3.0, 关键词路径 +1.0/词</td><td><strong>必须</strong></td></tr>
+<tr><td>Commits</td><td>搜索提交信息</td><td>首行摘要 +1.5</td><td>推荐</td></tr>
+<tr><td>Discussions</td><td>GraphQL 搜索</td><td>采纳答案 +1.0/词</td><td><strong>必须</strong></td></tr>
+</table>
+
+<div class="card">
+<h4 style="margin-top:0">JSON 输出</h4>
+<p style="font-size:13px;margin-bottom:8px">加上 <code>--json</code> 获取结构化输出，适合进一步分析或集成到其他工具：</p>
+<pre style="margin:0;font-size:12px;padding:8px 12px"><code>python search_github.py --config search_config.json --json -o results.json</code></pre>
+</div>
+</section>
+
+<!-- ==================== TUT 8: SMART SEARCH ==================== -->
+<section id="tut-smart">
+<h2>教程 8: Smart 搜索 (v6)</h2>
+<p>Smart 搜索将 AI 引入搜索闭环：脚本输出中间结果 &rarr; AI 审阅并过滤噪声 &rarr; AI 覆盖评分 &rarr; 可选二轮补搜。整个流程由三个 CLI 参数驱动。</p>
+
+<div class="card" style="border-left:3px solid var(--green);margin-bottom:20px">
+<h4 style="margin-top:0;color:var(--green)">何时自动启用 Smart？</h4>
+<p style="font-size:13px;margin:0 0 8px">AI 检测到以下<strong>任一信号</strong>时，自动启用 Smart 流程（用户无需明确说 &ldquo;Smart&rdquo;）：</p>
+<table style="font-size:13px;margin:0 0 12px">
+<tr><th>用户表述</th><th>AI 解读</th></tr>
+<tr><td>"精准一些" / "精准搜索"</td><td>明确要求高精度，启用 Smart</td></tr>
+<tr><td>"过滤噪声" / "误报太多" / "不相关的去掉"</td><td>结果质量不满意，启用 Smart 审阅</td></tr>
+<tr><td>"帮我审查结果"</td><td>直接要求 AI 介入，启用 Smart</td></tr>
+<tr><td>"补搜" / "再搜一下..."</td><td>需要二轮搜索，启用 --append-queries</td></tr>
+<tr><td>多类型搜索 + 结果量大 (&gt;50)</td><td>AI 主动建议启用 Smart</td></tr>
+</table>
+<p style="font-size:13px;margin:0 0 8px"><strong>不启用 Smart 的场景：</strong>单类型搜索、结果清晰 (&lt;20 个)、用户未表达质量不满。此时标准搜索已足够。</p>
+<h4 style="margin-top:12px;color:var(--green)">Smart 耗时预期</h4>
+<table style="font-size:13px;margin:0">
+<tr><th>阶段</th><th>耗时</th><th>说明</th></tr>
+<tr><td>Phase 4: 第一轮搜索</td><td>10~60 秒</td><td>取决于类型数量和 API 配额</td></tr>
+<tr><td>Phase 5: AI 审阅</td><td>5~15 秒</td><td>AI 读取 intermediate.json 并判断（不消耗 GitHub API）</td></tr>
+<tr><td>Phase 6: 二轮补搜</td><td>5~20 秒</td><td>仅搜索新查询，缓存覆盖已有结果</td></tr>
+<tr><td><strong>总计</strong></td><td><strong>~30~90 秒</strong></td><td>比标准搜索多 10~30 秒（AI 审阅 + 补搜）</td></tr>
+</table>
+</div>
+
+<h3>Smart 工作流总览</h3>
+<div class="dc">
+<div class="fd">
+<div class="fb fb-c">第一轮搜索<small>--intermediate-json</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-k">AI 审阅<small>读取 intermediate.json<br>标记噪声 / 提升遗漏</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-r">评分覆盖<small>--score-overrides<br>ai_overrides.json</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-o">二轮补搜 (可选)<small>--append-queries<br>--resume</small></div><span class="fa">&rarr;</span>
+<div class="fb fb-c">最终报告</div>
+</div>
+</div>
+
+<h3>Step 1: 第一轮搜索 + 输出中间 JSON</h3>
+<pre><code>python search_github.py --config search_config.json \
+  --search-types issues prs code \
+  --intermediate-json intermediate.json \
+  --cache-file .search_cache.json \
+  -q -o results_round1.md</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p><code>--intermediate-json</code> 输出每种类型的 top-30 结果和 borderline 结果（评分在 <code>min_score</code> 附近的候选项），格式紧凑，便于 AI 快速审阅。</p>
+
+<h3>intermediate.json 示例</h3>
+<details>
+<summary>展开查看完整格式</summary>
+<div class="db">
+<pre style="font-size:12px;line-height:1.5;margin:0"><code>{
+  <span class="str">"version"</span>: <span class="str">"v6-intermediate"</span>,
+  <span class="str">"repo"</span>: <span class="str">"ROCm/rocm-libraries"</span>,
+  <span class="str">"component"</span>: <span class="str">"hipblaslt"</span>,
+  <span class="str">"topic"</span>: <span class="str">"page fault"</span>,
+  <span class="str">"instructions"</span>: <span class="str">"Review each item. Set 'ai_score' to your assessed relevance (0-30). Set 'ai_label' to 'relevant', 'noise', or 'borderline'. Save as JSON and pass back with --score-overrides."</span>,
+  <span class="str">"types"</span>: {
+    <span class="str">"issues"</span>: {
+      <span class="str">"total"</span>: <span class="num">86</span>,
+      <span class="str">"top"</span>: [
+        {
+          <span class="str">"number"</span>: <span class="num">1132</span>,
+          <span class="str">"title"</span>: <span class="str">"[Issue]: Strix Halo / gfx1151 results in GPU hangs..."</span>,
+          <span class="str">"score"</span>: <span class="num">23.9</span>,
+          <span class="str">"matched_keywords"</span>: [<span class="str">"gfxhub"</span>, <span class="str">"gpu hang"</span>, <span class="str">"page fault"</span>],
+          <span class="str">"state"</span>: <span class="str">"closed"</span>,
+          <span class="str">"body_snippet"</span>: <span class="str">"...amdgpu: [gfxhub] page fault (src_id:0 ring:24 vmid:8 pasid:32794)..."</span>,
+          <span class="str">"url"</span>: <span class="str">"https://github.com/ROCm/rocm-libraries/issues/1132"</span>
+        },
+        <span class="cmt">// ... top-30 结果 (按 score 降序)</span>
+      ],
+      <span class="str">"borderline"</span>: [
+        {
+          <span class="str">"number"</span>: <span class="num">2034</span>,
+          <span class="str">"title"</span>: <span class="str">"hipblaslt: assertion failure in batch mode"</span>,
+          <span class="str">"score"</span>: <span class="num">4.2</span>,
+          <span class="str">"matched_keywords"</span>: [],
+          <span class="str">"state"</span>: <span class="str">"open"</span>,
+          <span class="str">"body_snippet"</span>: <span class="str">"...this is NOT a page fault, but an assertion error in..."</span>,
+          <span class="str">"url"</span>: <span class="str">"https://github.com/ROCm/rocm-libraries/issues/2034"</span>
+        }
+      ]
+    },
+    <span class="str">"prs"</span>: { <span class="cmt">/* 同结构: total + top + borderline */</span> },
+    <span class="str">"code"</span>: { <span class="cmt">/* 同结构: total + top; Code 项含 path 而非 number */</span> }
+  }
+}</code></pre>
+</div>
+</details>
+
+<h3>Step 2: AI 审阅中间结果</h3>
+<p>AI 读取 <code>intermediate.json</code>，逐条判断相关性：</p>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--red)">
+<h4 style="margin-top:0;color:var(--red)">过滤噪声</h4>
+<p style="font-size:13px">Issue #2034 的 body 明确表示 &ldquo;this is NOT a page fault&rdquo; &mdash; 关键词出现在否定上下文中。将 <code>ai_score</code> 设为 <code>0</code>，使其从最终报告中移除。</p>
+</div>
+<div class="card" style="border-left:3px solid var(--green)">
+<h4 style="margin-top:0;color:var(--green)">提升遗漏</h4>
+<p style="font-size:13px">PR #1892 虽然标题中没有 &ldquo;page fault&rdquo;，但 body 描述了修复 GPU 非法内存访问的逻辑，且关联了 Issue #1601。将 <code>ai_score</code> 提升至 <code>18.0</code>。</p>
+</div>
+</div>
+
+<h3>Step 3: 生成评分覆盖文件</h3>
+<pre><code><span class="cmt">// ai_overrides.json</span>
+{
+  <span class="str">"overrides"</span>: {
+    <span class="str">"issues"</span>: {
+      <span class="str">"2034"</span>: { <span class="str">"ai_score"</span>: <span class="num">0</span>, <span class="str">"ai_label"</span>: <span class="str">"noise - negative context"</span> },
+      <span class="str">"1750"</span>: { <span class="str">"ai_score"</span>: <span class="num">15.0</span>, <span class="str">"ai_label"</span>: <span class="str">"relevant - describes same root cause"</span> }
+    },
+    <span class="str">"prs"</span>: {
+      <span class="str">"1892"</span>: { <span class="str">"ai_score"</span>: <span class="num">18.0</span>, <span class="str">"ai_label"</span>: <span class="str">"relevant - fixes #1601"</span> }
+    }
+  }
+}</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p style="font-size:13px;color:var(--text-dim)"><code>ai_score</code> 完全替代原始评分。设为 <code>0</code> 即移除该结果。<code>ai_label</code> 为可选标注，用于报告中的审计追踪。</p>
+
+<h3>Step 4: 应用覆盖并重新生成报告</h3>
+<pre><code>python search_github.py --config search_config.json \
+  --cache-file .search_cache.json --resume \
+  --score-overrides ai_overrides.json \
+  -q -o results_smart.md</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p><code>--resume</code> 从缓存加载第一轮结果（不重新调用 API），<code>--score-overrides</code> 将 AI 评分覆盖到对应结果上，重新排序后输出最终报告。</p>
+
+<h3>Step 5 (可选): 二轮补搜</h3>
+<p>审阅中发现新关键词（如 &ldquo;illegal memory access&rdquo; 在首轮 queries 中缺失），通过 <code>--append-queries</code> 追加查询：</p>
+<pre><code>python search_github.py --config search_config.json \
+  --cache-file .search_cache.json --resume \
+  --append-queries "hipblaslt \"illegal memory access\"" \
+                   "hipblaslt \"gpu hang\" memory" \
+  --score-overrides ai_overrides.json \
+  -o results_v2.md</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+<p style="font-size:13px;color:var(--text-dim)">新增查询仅搜索新结果（缓存中已有的不重复拉取），与第一轮结果合并、去重、重新评分。</p>
+
+<div class="card">
+<h4 style="margin-top:0">何时使用 Smart 搜索？</h4>
+<table style="font-size:13px;margin:0">
+<tr><th style="width:280px">场景</th><th>建议</th></tr>
+<tr><td>单类型搜索，结果 &lt;20 个，内容清晰</td><td><span style="color:var(--text-dim)">不需要</span> &mdash; 标准搜索已足够</td></tr>
+<tr><td>首次搜索，尚未看到结果</td><td><span style="color:var(--text-dim)">不需要</span> &mdash; 先用标准搜索建立基线，不满意再升级</td></tr>
+<tr><td>多类型搜索，结果量大 (&gt;50)</td><td><strong style="color:var(--green)">推荐</strong> &mdash; AI 过滤噪声、提升精度</td></tr>
+<tr><td>看到结果后发现误报多</td><td><strong style="color:var(--green)">推荐</strong> &mdash; 从缓存恢复 + AI 审阅（零额外 API 消耗）</td></tr>
+<tr><td>首轮结果中发现遗漏关键词</td><td><strong style="color:var(--green)">推荐</strong> &mdash; <code>--append-queries</code> 补搜</td></tr>
+<tr><td>关键词在否定上下文频繁出现</td><td><strong style="color:var(--orange)">强烈推荐</strong> &mdash; AI 识别否定模式（如 &ldquo;not a page fault&rdquo;）</td></tr>
+<tr><td>需要向团队/领导汇报搜索结论</td><td><strong style="color:var(--orange)">强烈推荐</strong> &mdash; AI 审阅提升可信度，<code>ai_label</code> 提供审计追踪</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ==================== TUT 9: PARALLEL & LOGGING ==================== -->
+<section id="tut-parallel">
+<h2>教程 9: 并行执行 &amp; 日志控制 (v6)</h2>
+<p>v6 新增两项执行层优化：多搜索器<strong>并行执行</strong>和基于 Python <code>logging</code> 模块的<strong>结构化日志</strong>。</p>
+
+<h3>并行搜索</h3>
+<p>多类型搜索时，v6 默认使用 <code>ThreadPoolExecutor</code> 并行执行各搜索器。总耗时约等于最慢的单类型搜索，而非所有类型之和。</p>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--green)">
+<h4 style="margin-top:0;color:var(--green)">v6 并行 (默认)</h4>
+<pre style="margin:8px 0;font-size:12px;padding:8px 12px"><code><span class="cmt"># 3 种类型并行执行</span>
+python search_github.py -c config.json \
+  --search-types issues prs code</code></pre>
+<div class="lo" style="font-size:12px;margin-top:8px;padding:8px 12px">
+<span class="ok">[issues]</span> 完成 (12.3s)
+<span class="ok">[prs]</span>    完成 (14.1s)
+<span class="ok">[code]</span>   完成 (8.7s)
+总耗时: <span class="ok">14.5s</span> <span class="cmt">&larr; &asymp; max(12.3, 14.1, 8.7)</span>
+</div>
+</div>
+<div class="card" style="border-left:3px solid var(--orange)">
+<h4 style="margin-top:0;color:var(--orange)">串行模式</h4>
+<pre style="margin:8px 0;font-size:12px;padding:8px 12px"><code><span class="cmt"># 加 --no-parallel 退回串行</span>
+python search_github.py -c config.json \
+  --search-types issues prs code \
+  --no-parallel</code></pre>
+<div class="lo" style="font-size:12px;margin-top:8px;padding:8px 12px">
+<span class="ok">[issues]</span> 完成 (12.3s)
+<span class="ok">[prs]</span>    完成 (14.1s)
+<span class="ok">[code]</span>   完成 (8.7s)
+总耗时: <span class="nu">35.1s</span> <span class="cmt">&larr; 12.3 + 14.1 + 8.7</span>
+</div>
+</div>
+</div>
+
+<h3>线程安全</h3>
+<p>并行模式下，缓存写入通过 <code>threading.Lock</code> 保护，避免多搜索器同时写入同一缓存文件导致数据损坏。API 客户端的速率限制计数器同样线程安全。</p>
+
+<h3>日志控制</h3>
+<p>v6 使用 Python <code>logging</code> 模块替代 <code>print()</code>，所有内部模块按 <code>gss.*</code> 层级输出日志：</p>
+<table>
+<tr><th>Logger 名称</th><th>来源模块</th><th>典型输出</th></tr>
+<tr><td><code>gss.api</code></td><td>core/api_client.py</td><td>HTTP 请求、速率限制警告、重试信息</td></tr>
+<tr><td><code>gss.scorer</code></td><td>core/scorer.py</td><td>评分过程（仅 DEBUG 级别）</td></tr>
+<tr><td><code>gss.cache</code></td><td>core/cache.py</td><td>缓存读写、恢复状态</td></tr>
+<tr><td><code>gss.searcher.*</code></td><td>searchers/*.py</td><td>查询执行进度、结果计数</td></tr>
+</table>
+
+<h3>三种粒度</h3>
+<div class="card-row" style="grid-template-columns:1fr 1fr 1fr">
+<div class="card" style="border-left:3px solid var(--green)">
+<h4 style="margin-top:0;color:var(--green)">--quiet / -q</h4>
+<p style="font-size:13px">仅输出 WARNING 及以上。推荐 AI 调用时使用，避免日志干扰 AI 对报告的解析。</p>
+<pre style="font-size:11px;padding:6px 10px;margin:4px 0"><code>python search_github.py -c cfg.json -q</code></pre>
+</div>
+<div class="card" style="border-left:3px solid var(--accent)">
+<h4 style="margin-top:0;color:var(--accent)">默认 (INFO)</h4>
+<p style="font-size:13px">输出搜索进度、完成状态、缓存操作。适合人工交互。</p>
+<pre style="font-size:11px;padding:6px 10px;margin:4px 0"><code>python search_github.py -c cfg.json</code></pre>
+</div>
+<div class="card" style="border-left:3px solid var(--orange)">
+<h4 style="margin-top:0;color:var(--orange)">--verbose / -v</h4>
+<p style="font-size:13px">输出 DEBUG 级别：API 请求 URL、响应头、评分明细。用于排查问题。</p>
+<pre style="font-size:11px;padding:6px 10px;margin:4px 0"><code>python search_github.py -c cfg.json -v</code></pre>
+</div>
+</div>
+
+<h3>真实日志输出示例</h3>
+<p style="font-size:13px;color:var(--text-dim);margin-bottom:8px">以下为 hipblaslt page fault 搜索的真实日志格式。默认 INFO 级别是人工交互时最常见的输出。</p>
+
+<h4 style="font-size:13px;color:var(--accent);margin:12px 0 4px">默认 INFO 日志 (人工交互常见)</h4>
+<div class="lo" style="font-size:12px">
+<span class="ph">INFO</span>  gss - GitHub Semantic Search v6
+<span class="ph">INFO</span>  gss - 仓库: ROCm/rocm-libraries | 组件: hipblaslt | 主题: page fault
+<span class="ph">INFO</span>  gss.searcher.issue - 查询 1/3: 42 results
+<span class="ph">INFO</span>  gss.searcher.issue - 查询 2/3: 30 results (18 重复)
+<span class="ph">INFO</span>  gss.searcher.issue - 查询 3/3: 28 results (14 重复)
+<span class="ph">INFO</span>  gss.scorer - 正在评分 86 个 issues...
+<span class="ph">INFO</span>  gss - [issues] 完成 (12.3s)
+<span class="ph">INFO</span>  gss.cache - 已保存到 .cache.json (86 issues)
+</div>
+
+<h4 style="font-size:13px;color:var(--orange);margin:16px 0 4px">--verbose DEBUG 日志 (排查问题时使用)</h4>
+<div class="lo" style="font-size:12px">
+<span class="ph">INFO</span>  gss - GitHub Semantic Search v6
+<span class="ph">INFO</span>  gss - 仓库: ROCm/rocm-libraries | 组件: hipblaslt | 主题: page fault
+<span class="ph">DEBUG</span> gss.api - GET https://api.github.com/search/issues?q=hipblaslt+%22page+fault%22+repo%3AROCm%2Frocm-libraries
+<span class="ph">DEBUG</span> gss.api - 200 OK | X-RateLimit-Remaining: 28
+<span class="ph">INFO</span>  gss.searcher.issue - 查询 1/3: 42 results
+<span class="ph">DEBUG</span> gss.scorer - Issue #1132: component(body)=2.0 + component(label)=3.0 + high(&ldquo;page fault&rdquo;)=5.0 + title=2.0 = 12.0
+<span class="ph">INFO</span>  gss - [issues] 完成 (12.3s)
+<span class="ph">WARNING</span> gss.api - 速率限制接近: 剩余 5 次/30次, 重置于 45s 后
+</div>
+
+<h4 style="font-size:13px;color:var(--green);margin:16px 0 4px">--quiet 日志 (AI 调用时推荐)</h4>
+<div class="lo" style="font-size:12px">
+<span class="ph">WARNING</span> gss.api - 速率限制接近: 剩余 5 次/30次, 重置于 45s 后
+<span class="cmt">(仅 WARNING 及以上可见，搜索正常时无输出)</span>
+</div>
+</section>
+
+<!-- ==================== TUT 10: CROSS-REFERENCES ==================== -->
+<section id="tut-crossref">
+<h2>教程 10: 交叉引用 (v6)</h2>
+<p>v6 的交叉引用引擎 (<code>core/cross_ref.py</code>) 自动提取搜索结果中 Issue、PR、Commit 之间的关联关系，并生成有向关系图（PNG）。无需额外参数，用户请求 ≥2 种可关联类型时自动启用。</p>
+
+<h3>触发条件</h3>
+<p>基于<strong>用户配置</strong>（非结果数据）判断：当 <code>search_types</code> 包含 <code>issues</code>、<code>prs</code>、<code>commits</code> 中的 <strong>≥2 种</strong>时自动运行。</p>
+<table>
+<tr><th>用户意图</th><th>search_types</th><th>触发？</th></tr>
+<tr><td>"找 issue 和 PR"</td><td><code>["issues", "prs"]</code></td><td style="color:var(--green)">✓ 2 种可关联类型</td></tr>
+<tr><td>"全面搜索"</td><td><code>["issues", "prs", "commits", "code"]</code></td><td style="color:var(--green)">✓ 3 种可关联类型</td></tr>
+<tr><td>"找 issue"</td><td><code>["issues"]</code></td><td style="color:var(--red)">✗ 仅 1 种</td></tr>
+<tr><td>"找 issue 和代码"</td><td><code>["issues", "code"]</code></td><td style="color:var(--red)">✗ code 不参与关联</td></tr>
+</table>
+
+<h3>关联检测模式</h3>
+<p>引擎扫描 PR body/title、Commit message、Issue body，提取以下 5 类链接：</p>
+<table>
+<tr><th>来源</th><th>目标</th><th>检测模式</th><th>关系</th></tr>
+<tr><td>PR body</td><td>Issue</td><td><code>fixes/closes/resolves #N</code></td><td><code>fixes</code>（强关联）</td></tr>
+<tr><td>PR body</td><td>Issue</td><td><code>#N</code> 泛引用</td><td><code>refs</code>（弱关联）</td></tr>
+<tr><td>PR body/title</td><td>PR</td><td><code>#N</code> 引用另一 PR</td><td><code>refs</code>（PR→PR）</td></tr>
+<tr><td>Commit msg</td><td>PR / Issue</td><td><code>(#N)</code> 引用</td><td><code>refs</code></td></tr>
+<tr><td>Issue body</td><td>PR</td><td><code>#N</code> 引用</td><td><code>refs</code></td></tr>
+</table>
+<p style="font-size:13px;color:var(--text-dim)">只关联当前搜索结果中出现的 Item（避免误匹配无关编号）。</p>
+
+<h3>输出：表格 + 关系图</h3>
+<p>交叉引用摘要附加在 Markdown 报告末尾，包含多个表格和一张 PNG 关系图：</p>
+<pre><code><span class="cmt">## 交叉引用</span>
+<span class="cmt">统计: 58 条引用 (Issue↔PR: 3, PR↔PR: 5, Commit→*: 50)</span>
+
+<span class="cmt">### Issue ↔ PR 关联</span>
+| Issue  | 关联 PR | 类型  |
+|--------|---------|-------|
+| <span class="kw">#1601</span>  | <span class="fn">#1892</span>   | fixes |
+
+<span class="cmt">### PR → PR 关联</span>
+| 来源 PR | 引用 PR | 类型 |
+|---------|---------|------|
+| <span class="kw">#2017</span>   | <span class="fn">#1892</span>   | ref  |
+| <span class="kw">#2647</span>   | <span class="fn">#2472</span>   | ref  |
+
+<span class="cmt">### Commit 引用</span>
+| Commit  | 引用对象    | 类型 |
+|---------|------------|------|
+| <span class="kw">2b290f0</span> | PR <span class="fn">#1892</span>  | ref  |
+
+<span class="cmt">![交叉引用关系图](cross_ref_graph.png)</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+<h3>关系图可视化</h3>
+<p>引擎自动生成 <code>cross_ref_graph.png</code>，与报告文件同目录保存。</p>
+<div class="card">
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li><strong>枢纽过滤</strong>：仅展示 ≥2 条连线的节点（枢纽节点）及其关联邻居，过滤 1:1 简单链接</li>
+<li><strong>智能分列</strong>：来源节点（左）→ 被引用节点（中）→ Commit（右），PR→PR 箭头跨列可见</li>
+<li><strong>颜色编码</strong>：<span style="color:#E65100">■</span> Issue = 红/粉、<span style="color:#E65100">■</span> PR 来源 = 橙色、<span style="color:#1A7F37">■</span> PR 被引用 = 绿色、<span style="color:#0969DA">■</span> Commit = 蓝色</li>
+<li><strong>紧凑节点</strong>：仅标注序号（如 <code>#1892</code>），避免标题文字导致重叠</li>
+<li>上限 35 个节点，超出按连接度排序截断</li>
+</ul>
+</div>
+<p style="font-size:13px;margin:12px 0 6px">以下为 <code>ROCm/rocm-libraries</code> 仓库 OOM 主题搜索的实际关系图（PR + Commit）：</p>
+<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+<img src="cross_ref_graph.png" alt="交叉引用关系图（实际生成）" style="max-width:100%;border-radius:6px">
+</div>
+
+<h3>与 Smart 搜索联动</h3>
+<p>交叉引用的输出有助于 AI 审阅阶段的判断：</p>
+<div class="card">
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li>PR #1892 通过 <code>fixes #1601</code> 关联了高分 Issue → AI 应提升该 PR 的 <code>ai_score</code></li>
+<li>Commit 2b290f0 引用了 #1892 → AI 可判断这是实际修复提交，值得在报告中标注</li>
+<li>PR #2017 引用 PR #1892（follow-up）→ 关系图中 #1892 是枢纽节点，重点关注</li>
+<li>Issue #1750 被多个 PR 引用 → 说明该问题可能有多次修复尝试，AI 应重点审阅</li>
+</ul>
+</div>
+</section>
+
+<!-- ==================== TUT 11: CROSS-TOPIC ANALYSIS ==================== -->
+<section id="tut-crosstopic">
+<h2>教程 11: 跨主题关联分析</h2>
+<p>当用户询问两个看似不同的主题之间的关系时，可以运行多次搜索，再交叉比对结果中的共同 Issue，从而揭示<strong>症状与根因</strong>的因果链。</p>
+
+<h3>工作原理</h3>
+<div class="card">
+<ol style="font-size:13px;margin:4px 0 0 16px">
+<li><strong>搜索 A</strong>：以"症状"为主题搜索（如 page fault）→ 得到 Issues/PRs/Commits 集合 A</li>
+<li><strong>搜索 B</strong>：以"根因"为主题搜索（如 expert scheduling mode）→ 得到集合 B</li>
+<li><strong>交叉比对</strong>：找到 A ∩ B 中的共同 Issue → 这些 Issue 同时关联症状和根因</li>
+<li><strong>因果链重建</strong>：结合每次搜索的交叉引用图，串联完整链路</li>
+</ol>
+</div>
+
+<h3>真实案例: Expert Scheduling Mode → Page Fault</h3>
+<p>以下案例来自 <code>ROCm/rocm-libraries</code> 的实际搜索结果：</p>
+
+<div class="card" style="border-left:3px solid var(--orange)">
+<h4 style="margin-top:0;color:var(--orange)">Issue #3211 — 两次搜索的交叉点</h4>
+<table style="font-size:12px;margin:8px 0">
+<tr><th>搜索主题</th><th>匹配关键词</th><th>得分</th><th>视角</th></tr>
+<tr><td>Page Fault 搜索</td><td><code>illegal memory access</code></td><td style="color:var(--green)">10.0</td><td>症状 — 用户看到的错误</td></tr>
+<tr><td>ESM 搜索</td><td><code>expert scheduling mode</code></td><td style="color:var(--green)">7.6</td><td>根因 — 功能启用导致问题</td></tr>
+</table>
+
+<p style="font-size:13px;margin:8px 0 4px"><strong>因果链：</strong></p>
+<div style="background:var(--bg-code);border-radius:6px;padding:10px 14px;font-family:var(--font-mono);font-size:12px;line-height:2">
+Expert Scheduling Mode 在 ROCm 7.0 启用 (hipblaslt)<br>
+&nbsp;&nbsp;&darr; AMD KFD 驱动不完全支持 (gfx12)<br>
+&nbsp;&nbsp;&darr; 触发 <span style="color:var(--red)">"HIP error: an illegal memory access was encountered"</span><br>
+&nbsp;&nbsp;&darr; 影响 4 个上游仓库 (ROCm#5245, #5581, #4846, TheRock#1795)<br>
+&nbsp;&nbsp;&darr; <span style="color:var(--green)">PR #3164</span> 临时禁用 gfx12 的 ESM (merged)<br>
+&nbsp;&nbsp;&darr; <span style="color:var(--orange)">Issue #3211</span> 跟踪有条件重新启用 (open, KFD API &ge;1.20)
+</div>
+</div>
+
+<h3>适用场景</h3>
+<ul style="font-size:13px">
+<li>用户问 "X 和 Y 有什么关系"</li>
+<li>一个功能变更导致的连锁 bug</li>
+<li>调查 regression 的根因与症状链</li>
+<li>追踪从 feature request 到 bug report 到 fix 的完整生命周期</li>
+</ul>
+</section>
+
+<!-- ==================== PARAMS ==================== -->
+<section id="params">
+<h2>参数参考</h2>
+<h3>CLI 参数</h3>
+<table>
+<tr><th>参数</th><th>默认</th><th>说明</th></tr>
+<tr><th colspan="3" style="background:rgba(88,166,255,.08);color:var(--accent);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">基础参数</th></tr>
+<tr><td><code>--config, -c</code></td><td></td><td>JSON 配置文件</td></tr>
+<tr><td><code>--repo</code></td><td>ROCm/rocm-libraries</td><td>GitHub 仓库</td></tr>
+<tr><td><code>--component</code></td><td>""</td><td>组件名，空=全仓库</td></tr>
+<tr><td><code>--topic</code></td><td>page fault</td><td>主题（报告显示用）</td></tr>
+<tr><th colspan="3" style="background:rgba(88,166,255,.08);color:var(--accent);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">搜索类型</th></tr>
+<tr><td><code>--search-types</code></td><td>无 (仅 issues)</td><td>指定搜索类型列表，如 <code>issues prs code commits discussions</code></td></tr>
+<tr><th colspan="3" style="background:rgba(88,166,255,.08);color:var(--accent);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">过滤参数</th></tr>
+<tr><td><code>--state</code></td><td>""</td><td>open/closed/全部</td></tr>
+<tr><td><code>--date-from</code></td><td>""</td><td>最早日期 YYYY-MM-DD</td></tr>
+<tr><td><code>--date-to</code></td><td>""</td><td>最晚日期 YYYY-MM-DD</td></tr>
+<tr><th colspan="3" style="background:rgba(88,166,255,.08);color:var(--accent);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">搜索选项</th></tr>
+<tr><td><code>--keywords</code></td><td>无</td><td>命令行直接指定关键词（替代 config 中的 keywords.high），空格分隔</td></tr>
+<tr><td><code>--queries</code></td><td>无</td><td>命令行直接指定查询语句（替代 config 中的 queries），空格分隔</td></tr>
+<tr><td><code>--search-comments</code></td><td>false</td><td>启用两阶段 comments (Issue/PR)</td></tr>
+<tr><td><code>--comments-low</code></td><td>3.0</td><td>Comments 评分下限（仅中间分数段获取评论）</td></tr>
+<tr><td><code>--comments-high</code></td><td>8.0</td><td>comments 分数上限</td></tr>
+<tr><td><code>--concurrency</code></td><td>0 (auto)</td><td>评论并发获取线程数（auto: 有 Token 4, 无 Token 1）</td></tr>
+<tr><th colspan="3" style="background:rgba(88,166,255,.08);color:var(--accent);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">缓存</th></tr>
+<tr><td><code>--cache-file</code></td><td>""</td><td>缓存文件路径</td></tr>
+<tr><td><code>--resume</code></td><td>false</td><td>增量搜索（从缓存恢复）</td></tr>
+<tr><th colspan="3" style="background:rgba(88,166,255,.08);color:var(--accent);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">输出</th></tr>
+<tr><td><code>--min-score</code></td><td>3.0</td><td>最低分数阈值</td></tr>
+<tr><td><code>--max-component</code></td><td>10</td><td>"仅组件匹配" 结果的最大显示数量</td></tr>
+<tr><td><code>--output, -o</code></td><td>stdout</td><td>输出文件</td></tr>
+<tr><td><code>--json</code></td><td>false</td><td>JSON 格式输出</td></tr>
+<tr><td><code>--dry-run</code></td><td>false</td><td>预览查询，不消耗 API 配额</td></tr>
+<tr><th colspan="3" style="background:rgba(59,185,80,.08);color:var(--green);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">Smart 选项 (v6)</th></tr>
+<tr><td><code>--intermediate-json</code></td><td>""</td><td>输出中间结果 JSON 供 AI 审阅（每类型 top-30 + borderline）</td></tr>
+<tr><td><code>--score-overrides</code></td><td>""</td><td>AI 评分覆盖文件路径（JSON，格式见<a href="#tut-smart">教程 8</a>）</td></tr>
+<tr><td><code>--append-queries</code></td><td>[]</td><td>追加查询（二轮搜索），配合 <code>--resume</code> 使用；已有结果不重复拉取</td></tr>
+<tr><th colspan="3" style="background:rgba(59,185,80,.08);color:var(--green);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px">执行选项 (v6)</th></tr>
+<tr><td><code>--no-parallel</code></td><td>false</td><td>禁用多搜索器并行执行，退回串行模式</td></tr>
+<tr><td><code>--verbose, -v</code></td><td>INFO</td><td>输出 DEBUG 级别日志（API 请求细节、评分过程）</td></tr>
+<tr><td><code>--quiet, -q</code></td><td>INFO</td><td>仅输出 WARNING 及以上日志（推荐 AI 调用时使用）</td></tr>
+</table>
+<h3>配置文件字段</h3>
+<table>
+<tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>repo</code></td><td>string</td><td>是</td><td>GitHub 仓库</td></tr>
+<tr><td><code>component</code></td><td>string</td><td>否</td><td>组件名，空=不限</td></tr>
+<tr><td><code>topic</code></td><td>string</td><td>是</td><td>搜索主题</td></tr>
+<tr><td><code>filters.state</code></td><td>string</td><td>否</td><td>"open"/"closed"/""</td></tr>
+<tr><td><code>filters.date_from</code></td><td>string</td><td>否</td><td>YYYY-MM-DD</td></tr>
+<tr><td><code>filters.date_to</code></td><td>string</td><td>否</td><td>YYYY-MM-DD</td></tr>
+<tr><td><code>search_types</code></td><td>string[]</td><td>否</td><td>搜索类型 (默认 <code>["issues"]</code>)。可选: <code>issues</code>、<code>prs</code>、<code>code</code>、<code>commits</code>、<code>discussions</code></td></tr>
+<tr><td><code>exclude_issues</code></td><td>int[]</td><td>否</td><td>排除 issue 编号</td></tr>
+<tr><td><code>keywords.high</code></td><td>string[]</td><td>是</td><td>高权重 (+5)</td></tr>
+<tr><td><code>keywords.medium</code></td><td>string[]</td><td>否</td><td>中权重 (+3)</td></tr>
+<tr><td><code>keywords.low</code></td><td>string[]</td><td>否</td><td>低权重 (+1)</td></tr>
+<tr><td><code>queries</code></td><td>string[]</td><td>是</td><td>查询，<code>{component}</code> 占位符</td></tr>
+</table>
+<h3>search_types 选项</h3>
+<table>
+<tr><th>类型值</th><th>API</th><th>Token</th><th>说明</th></tr>
+<tr><td><code>issues</code></td><td>REST Search</td><td>推荐</td><td>Issue 搜索 (默认)，支持两阶段 comments</td></tr>
+<tr><td><code>prs</code></td><td>REST Search</td><td>推荐</td><td>PR 搜索，含 review comments + 变更文件</td></tr>
+<tr><td><code>code</code></td><td>REST Search</td><td><strong>必须</strong></td><td>代码文件搜索，获取代码片段</td></tr>
+<tr><td><code>commits</code></td><td>REST Search</td><td>推荐</td><td>提交信息搜索</td></tr>
+<tr><td><code>discussions</code></td><td>GraphQL</td><td><strong>必须</strong></td><td>Discussion 搜索，含采纳答案</td></tr>
+</table>
+</section>
+
+<!-- ==================== REPORT FORMAT ==================== -->
+<section id="report-format">
+<h2>报告格式</h2>
+<p>报告模块 (<code>core/report.py</code>) 将输出分为<strong>执行摘要、各类型详细段落、交叉引用 (v6)、页脚</strong>四段。</p>
+
+<h3>报告结构</h3>
+<div class="dc">
+<div class="fd" style="flex-direction:column;align-items:stretch;gap:12px">
+<div class="fb fb-c" style="width:100%;text-align:left;padding:12px 16px">
+<strong>1. 执行摘要</strong><small>标题 / 总览表格（类型 | 搜索总数 | 关键词命中 | 仅组件匹配 | 最高分）/ 元数据 / 关键词列表</small></div>
+<div class="fb fb-k" style="width:100%;text-align:left;padding:12px 16px">
+<strong>2. 各类型详细段落 (Issues / PRs / Code / Commits / Discussions)</strong>
+<small>每段：标题 → 关键词匹配（详细卡片 + snippets）→ 仅组件匹配（紧凑表格, 受 <code>--max-component</code> 控制）→ 汇总表格</small></div>
+<div class="fb fb-r" style="width:100%;text-align:left;padding:12px 16px">
+<strong>3. 交叉引用 (v6 新增)</strong><small>追加在报告末尾。Issue↔PR、PR↔PR、Commit→PR/Issue 关联表格 + 枢纽过滤关系图（PNG）；用户请求 ≥2 种可关联类型时出现。格式见<a href="#tut-crossref" style="color:inherit;text-decoration:underline">教程 10</a></small></div>
+<div class="fb fb-o" style="width:100%;text-align:left;padding:12px 16px">
+<strong>4. 页脚</strong><small><code>*Generated by search_github.py v6*</code></small></div>
+</div>
+</div>
+
+<h3>关键词匹配 vs 仅组件匹配</h3>
+<div class="card-row">
+<div class="card" style="border-left:3px solid var(--green)">
+<h4 style="margin-top:0;color:var(--green)">关键词匹配 (Keyword-Matched)</h4>
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li>至少命中一个搜索关键词 (high/medium/low)</li>
+<li><strong>完整展示</strong>: 标题、状态、日期、Labels、匹配的关键词来源 (body/comments)、上下文 Snippet</li>
+<li>汇总表格只包含此类结果</li>
+</ul>
+</div>
+<div class="card" style="border-left:3px solid var(--orange)">
+<h4 style="margin-top:0;color:var(--orange)">仅组件匹配 (Component-Only)</h4>
+<ul style="font-size:13px;margin:4px 0 0 16px">
+<li>仅因包含组件名 (<code>component</code>) 被检索到</li>
+<li><strong>紧凑表格</strong>: 仅显示编号、状态、分数、日期、截断标题</li>
+<li>受 <code>--max-component N</code> 控制显示上限 (默认 10)</li>
+</ul>
+</div>
+</div>
+
+<h3>示例: 执行摘要片段</h3>
+<pre><code><span class="cmt"># GitHub 语义搜索报告 v6</span>
+
+<span class="cmt">## 执行摘要</span>
+
+| 类型           | 搜索总数 | 关键词命中 | 仅组件匹配 | 最高分 |
+|----------------|---------|-----------|-----------|--------|
+| Issues         | 86      | <span class="num">10</span>        | <span class="num">40</span>        | <span class="num">23.9</span>  |
+| Pull Requests  | 1002    | <span class="num">10</span>        | <span class="num">873</span>       | <span class="num">13.0</span>  |
+| Code           | 1       | <span class="num">1</span>         | <span class="num">0</span>         | <span class="num">11.0</span>  |
+
+- <span class="kw">仓库</span>: ROCm/rocm-libraries
+- <span class="kw">组件</span>: hipblaslt
+- <span class="kw">主题</span>: page fault
+<span class="cmt">...</span></code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+<h3>完整真实报告示例</h3>
+<p><code>hipblaslt page fault</code> 搜索（Issues + PRs + Code + Discussions）的真实输出报告。</p>
+<details>
+<summary>展开查看完整报告 (search_pagefault_results.md)</summary>
+<div class="db" style="font-size:13px;line-height:1.8">
+
+<!-- Executive Summary -->
+<h3 style="font-size:20px;border-bottom:2px solid var(--accent);padding-bottom:8px;margin-top:0">GitHub 语义搜索报告 v6</h3>
+<h4 style="color:var(--text-bright)">执行摘要</h4>
+<table style="font-size:12px">
+<tr><th>类型</th><th>搜索总数</th><th>关键词命中</th><th>仅组件匹配</th><th>最高分</th></tr>
+<tr><td>Issues</td><td>86</td><td style="color:var(--green);font-weight:700">10</td><td>40</td><td style="color:var(--green)">23.9</td></tr>
+<tr><td>Pull Requests</td><td>1002</td><td style="color:var(--green);font-weight:700">10</td><td>873</td><td style="color:var(--green)">13.0</td></tr>
+<tr><td>Code</td><td>1</td><td style="color:var(--green);font-weight:700">1</td><td>0</td><td style="color:var(--green)">11.0</td></tr>
+<tr><td>Discussions</td><td>0</td><td>0</td><td>0</td><td>-</td></tr>
+</table>
+<ul style="font-size:12px;color:var(--text-dim);margin:8px 0 16px 16px">
+<li><strong>仓库</strong>: <a href="https://github.com/ROCm/rocm-libraries">ROCm/rocm-libraries</a></li>
+<li><strong>组件</strong>: hipblaslt &nbsp; <strong>主题</strong>: page fault</li>
+<li><strong>时间范围</strong>: &ge; 2024-01-01 &nbsp; <strong>搜索时间</strong>: 2026-02-09 12:48:32</li>
+<li><strong>关键词</strong> (14 个): <span style="color:var(--red)">高</span> page fault, memory access fault, illegal memory access, segmentation fault &nbsp; <span style="color:var(--orange)">中</span> sigsegv, signal 11, gpu hang, gpu reset, gfxhub &nbsp; <span style="color:var(--text-dim)">低</span> vmid, core dump, bus error, MCE, machine check</li>
+</ul>
+<hr style="border-color:var(--border)">
+
+<!-- Issues Section -->
+<h4 style="color:var(--text-bright);margin-top:20px">Issues (10 个关键词命中 / 50 个总相关)</h4>
+
+<p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin:12px 0 8px">关键词匹配 (10 个)</p>
+
+<div style="border-left:3px solid var(--red);padding:10px 14px;margin:8px 0;background:rgba(248,81,73,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--red)">&#x1F534;</span> <a href="https://github.com/ROCm/rocm-libraries/issues/1132">#1132</a></strong> (score: <span style="color:var(--green);font-weight:700">23.9</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[Issue]: Strix Halo / gfx1151 results in GPU hangs under the ROCm backend of llama.cpp</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: closed | 日期: 2025-08-09 | Labels: <code>status: triage</code></span><br>
+<span style="font-size:11px">匹配: body: <code>gfxhub</code>, <code>gpu hang</code>, <code>gpu reset</code>, <code>page fault</code>, <code>vmid</code></span>
+<div style="background:var(--bg-code);border-radius:4px;padding:6px 10px;margin:6px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);line-height:1.6">
+[body] ...: amdgpu 0000:c3:00.0: amdgpu: [gfxhub] <mark style="background:rgba(63,185,80,.2);color:var(--green)">page fault</mark> (src_id:0 ring:24 <mark style="background:rgba(63,185,80,.2);color:var(--green)">vmid</mark>:8 pasid:32794)...
+</div>
+</div>
+
+<div style="border-left:3px solid var(--green);padding:10px 14px;margin:8px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--green)">&#x1F7E2;</span> <a href="https://github.com/ROCm/rocm-libraries/issues/459">#459</a></strong> (score: <span style="color:var(--green);font-weight:700">19.5</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">kernel oops for gfx1201 on Fedora Rawhide</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: open | 日期: 2025-06-30 | Labels: <code>project: rocblas</code></span><br>
+<span style="font-size:11px">匹配: body: <code>core dump</code>, <code>gfxhub</code>, <code>memory access fault</code>, <code>page fault</code>, <code>vmid</code></span>
+<div style="background:var(--bg-code);border-radius:4px;padding:6px 10px;margin:6px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);line-height:1.6">
+[body] ...ing after vfork from child process 477] <mark style="background:rgba(63,185,80,.2);color:var(--green)">Memory access fault</mark> by GPU node-1 (Agent handle: 0x55ad5e2a1be0)...
+</div>
+</div>
+
+<div style="border-left:3px solid var(--green);padding:10px 14px;margin:8px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--green)">&#x1F7E2;</span> <a href="https://github.com/ROCm/rocm-libraries/issues/4128">#4128</a></strong> (score: <span style="color:var(--green);font-weight:700">14.3</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[Issue]: Calling hipblasLtMatmulAlgoGetHeuristic() causes a segmentation fault (SIGSEGV)</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: open | 日期: 2026-01-28 | Labels: 无</span><br>
+<span style="font-size:11px">匹配: body: <code>segmentation fault</code>, <code>sigsegv</code></span>
+</div>
+
+<div style="border-left:3px solid var(--green);padding:10px 14px;margin:8px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--green)">&#x1F7E2;</span> <a href="https://github.com/ROCm/rocm-libraries/issues/84">#84</a></strong> (score: <span style="color:var(--green);font-weight:700">12.6</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">kernel oops for gfx1151 on Fedora Rawhide on 6.4</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: open | 日期: 2025-05-28 | Labels: <code>project: rocrand</code></span><br>
+<span style="font-size:11px">匹配: body: <code>gfxhub</code>, <code>gpu reset</code>, <code>page fault</code>, <code>vmid</code></span>
+<div style="background:var(--bg-code);border-radius:4px;padding:6px 10px;margin:6px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);line-height:1.6">
+[body] ...amdgpu: [<mark style="background:rgba(63,185,80,.2);color:var(--green)">gfxhub</mark>] <mark style="background:rgba(63,185,80,.2);color:var(--green)">page fault</mark> (src_id:0 ring:88 <mark style="background:rgba(63,185,80,.2);color:var(--green)">vmid</mark>:10 pasid:32772)... <mark style="background:rgba(63,185,80,.2);color:var(--green)">GPU reset</mark> begin!...
+</div>
+</div>
+
+<div style="border-left:3px solid var(--green);padding:10px 14px;margin:8px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--green)">&#x1F7E2;</span> <a href="https://github.com/ROCm/rocm-libraries/issues/265">#265</a></strong> (score: <span style="color:var(--green);font-weight:700">12.3</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[Issue]: Memory access fault by GPU node-2 (Agent handle: 0x3596e2c0) on address 0x7f9de440f000</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: open | 日期: 2025-06-20 | Labels: <code>project: hipblaslt</code></span><br>
+<span style="font-size:11px">匹配: body: <code>memory access fault</code></span>
+<div style="background:var(--bg-code);border-radius:4px;padding:6px 10px;margin:6px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);line-height:1.6">
+[body] ...after building hipBLASLt library. <mark style="background:rgba(63,185,80,.2);color:var(--green)">Memory access fault</mark> by GPU node-2 (Agent handle: 0x3596e2c0)...
+</div>
+</div>
+
+<div style="border-left:3px solid var(--green);padding:10px 14px;margin:8px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--green)">&#x1F7E2;</span> <a href="https://github.com/ROCm/rocm-libraries/issues/3211">#3211</a></strong> (score: <span style="color:var(--green);font-weight:700">10.0</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[Issue]: [hipblaslt][gfx12] Conditionally enable Expert Scheduling Mode</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: open | 日期: 2025-12-08 | Labels: <code>project: hipblaslt</code>, <code>organization: ROCm</code></span><br>
+<span style="font-size:11px">匹配: body: <code>illegal memory access</code></span>
+<div style="background:var(--bg-code);border-radius:4px;padding:6px 10px;margin:6px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);line-height:1.6">
+[body] ...most notably &ldquo;HIP error: an <mark style="background:rgba(63,185,80,.2);color:var(--green)">illegal memory access</mark> was encountered&rdquo;...
+</div>
+</div>
+
+<p style="font-size:11px;color:var(--text-dim);text-align:center;margin:4px 0">... 还有 4 个关键词匹配结果 (score: 9.3 ~ 7.0) ...</p>
+
+<p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--orange);margin:16px 0 8px">仅组件匹配 (40 个，显示前 5 个)</p>
+<table style="font-size:11px">
+<tr><th>#</th><th>Issue</th><th>状态</th><th>分数</th><th>日期</th><th>标题</th></tr>
+<tr><td>1</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/3201">#3201</a></td><td style="color:var(--green)">open</td><td>5.0</td><td>2025-12-06</td><td>[hipblaslt] HIPBLASLT_ENABLE_OPENMP=OFF is broken</td></tr>
+<tr><td>2</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/2432">#2432</a></td><td style="color:var(--green)">open</td><td>5.0</td><td>2025-11-03</td><td>[rocblas][hipblaslt] Replicate hipblaslt specific test...</td></tr>
+<tr><td>3</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/317">#317</a></td><td style="color:var(--green)">open</td><td>5.0</td><td>2025-06-20</td><td>[Issue]: hipblaslt-bench returns (Gflops,GB/s,us)=(inf,inf,0)</td></tr>
+<tr><td>4</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/260">#260</a></td><td style="color:var(--green)">open</td><td>5.0</td><td>2025-06-20</td><td>[Issue]: HIPBLASLT_TUNING_OVERRIDE_FILE fails to load...</td></tr>
+<tr><td>5</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/2905">#2905</a></td><td style="color:var(--green)">open</td><td>5.0</td><td>2025-11-25</td><td>[Issue]: Tuning file in hipBLASLt is not cached...</td></tr>
+</table>
+<p style="font-size:11px;color:var(--text-dim);font-style:italic">... 另有 35 个仅组件匹配结果未显示 ...</p>
+
+<h4 style="font-size:12px;margin:12px 0 6px">汇总表格 (score &ge; 10.0)</h4>
+<table style="font-size:11px">
+<tr><th>#</th><th>Issue</th><th>状态</th><th>分数</th><th>匹配关键词</th><th>来源</th></tr>
+<tr><td>1</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/1132">#1132</a></td><td style="color:var(--red)">closed</td><td style="color:var(--green);font-weight:700">23.9</td><td>gfxhub, gpu hang, gpu reset, page fault, vmid</td><td>body</td></tr>
+<tr><td>2</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/459">#459</a></td><td style="color:var(--green)">open</td><td style="color:var(--green);font-weight:700">19.5</td><td>core dump, gfxhub, memory access fault, page fault, vmid</td><td>body</td></tr>
+<tr><td>3</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/4128">#4128</a></td><td style="color:var(--green)">open</td><td style="color:var(--green);font-weight:700">14.3</td><td>segmentation fault, sigsegv</td><td>body</td></tr>
+<tr><td>4</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/84">#84</a></td><td style="color:var(--green)">open</td><td style="color:var(--green);font-weight:700">12.6</td><td>gfxhub, gpu reset, page fault, vmid</td><td>body</td></tr>
+<tr><td>5</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/265">#265</a></td><td style="color:var(--green)">open</td><td style="color:var(--green);font-weight:700">12.3</td><td>memory access fault</td><td>body</td></tr>
+<tr><td>6</td><td><a href="https://github.com/ROCm/rocm-libraries/issues/3211">#3211</a></td><td style="color:var(--green)">open</td><td style="color:var(--green);font-weight:700">10.0</td><td>illegal memory access</td><td>body</td></tr>
+</table>
+
+<hr style="border-color:var(--border);margin:20px 0">
+
+<!-- PR Section -->
+<h4 style="color:var(--text-bright)">Pull Requests (10 个关键词命中 / 883 个总相关)</h4>
+
+<p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin:12px 0 8px">关键词匹配 (10 个)</p>
+
+<div style="border-left:3px solid var(--green);padding:10px 14px;margin:8px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--green)">&#x1F7E2;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/3734">#3734</a></strong> (score: <span style="color:var(--green);font-weight:700">13.0</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[hipblaslt] Fix segmentation fault in swizzle sample code</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: open | 日期: 2026-01-09 | Labels: <code>project: hipblaslt</code> | 匹配: <code>segmentation fault</code></span>
+</div>
+
+<div style="border-left:3px solid var(--purple);padding:10px 14px;margin:8px 0;background:rgba(188,140,255,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--purple)">&#x2705;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/1880">#1880</a></strong> (score: <span style="color:var(--green);font-weight:700">12.5</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[hipblaslt] update CHANGELOG</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: merged | 日期: 2025-09-30 | 变更文件: <code>projects/hipblaslt/CHANGELOG.md</code> | 匹配: <code>segmentation fault</code></span>
+</div>
+
+<div style="border-left:3px solid var(--purple);padding:10px 14px;margin:8px 0;background:rgba(188,140,255,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--purple)">&#x2705;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/4162">#4162</a></strong> (score: <span style="color:var(--green);font-weight:700">12.3</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">Add mutex lock to getSolutionByIndex for thread safety</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: merged | 日期: 2026-01-30 | Labels: <code>project: hipblaslt</code> | 匹配: <code>segmentation fault</code></span>
+</div>
+
+<div style="border-left:3px solid var(--green);padding:10px 14px;margin:8px 0;background:rgba(63,185,80,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--green)">&#x1F7E2;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/3707">#3707</a></strong> (score: <span style="color:var(--green);font-weight:700">11.0</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[hipblaslt] Fix tensilelite-client seg fault when selection-only is on</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: open | 日期: 2026-01-08 | Labels: <code>project: hipblaslt</code> | 匹配: <code>segmentation fault</code></span>
+</div>
+
+<div style="border-left:3px solid var(--purple);padding:10px 14px;margin:8px 0;background:rgba(188,140,255,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--purple)">&#x2705;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/3871">#3871</a></strong> (score: <span style="color:var(--green);font-weight:700">10.6</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">change tox/task.py to auto detect gpu arch</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: merged | 日期: 2026-01-15 | Labels: <code>project: hipblaslt</code> | 匹配: <code>segmentation fault</code></span>
+</div>
+
+<div style="border-left:3px solid var(--purple);padding:10px 14px;margin:8px 0;background:rgba(188,140,255,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--purple)">&#x2705;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/4127">#4127</a></strong> (score: <span style="color:var(--green);font-weight:700">10.3</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[rocprim] Fix memory access fault while testing rocsparse with a debug build</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: merged | 日期: 2026-01-28 | Labels: <code>project: rocprim</code> | 匹配: <code>memory access fault</code></span>
+</div>
+
+<div style="border-left:3px solid var(--purple);padding:10px 14px;margin:8px 0;background:rgba(188,140,255,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--purple)">&#x2705;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/3995">#3995</a></strong> (score: <span style="color:var(--green);font-weight:700">10.0</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">Raise exception instead of segfaulting</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: merged | 日期: 2026-01-21 | Labels: <code>project: hipblaslt</code> | 匹配: <code>segmentation fault</code></span>
+</div>
+
+<div style="border-left:3px solid var(--purple);padding:10px 14px;margin:8px 0;background:rgba(188,140,255,.03);border-radius:0 6px 6px 0">
+<strong><span style="color:var(--purple)">&#x2705;</span> <a href="https://github.com/ROCm/rocm-libraries/pull/1274">#1274</a></strong> (score: <span style="color:var(--green);font-weight:700">10.0</span>)<br>
+<span style="font-size:12px;color:var(--text-bright)">[hipblaslt] restore tensile tuning from interruption with log</span><br>
+<span style="font-size:11px;color:var(--text-dim)">状态: merged | 日期: 2025-08-20 | Labels: <code>project: hipblaslt</code> | 匹配: <code>gpu hang</code></span>
+</div>
+
+<p style="font-size:11px;color:var(--text-dim);text-align:center;margin:4px 0">... 还有 2 个关键词匹配的 PRs (score: 8.0, 7.0) ...</p>
+
+<p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--orange);margin:16px 0 8px">仅组件匹配 (873 个，显示前 3 个)</p>
+<table style="font-size:11px">
+<tr><th>#</th><th>PR</th><th>状态</th><th>分数</th><th>日期</th><th>标题</th></tr>
+<tr><td>1</td><td><a href="https://github.com/ROCm/rocm-libraries/pull/3164">#3164</a></td><td style="color:var(--purple)">merged</td><td>8.5</td><td>2025-12-05</td><td>[hipblaslt] Disable expert scheduling mode for gfx12</td></tr>
+<tr><td>2</td><td><a href="https://github.com/ROCm/rocm-libraries/pull/4196">#4196</a></td><td style="color:var(--purple)">merged</td><td>8.5</td><td>2026-02-02</td><td>[hipblaslt] Disable TailloopInNll + LocalSplitU</td></tr>
+<tr><td>3</td><td><a href="https://github.com/ROCm/rocm-libraries/pull/4304">#4304</a></td><td style="color:var(--purple)">merged</td><td>8.5</td><td>2026-02-03</td><td>[hipblaslt][CMS] Add BF16 224x128x64 NN tile solution</td></tr>
+</table>
+
+<hr style="border-color:var(--border);margin:20px 0">
+
+<!-- Code Section -->
+<h4 style="color:var(--text-bright)">Code (1 个相关文件)</h4>
+
+<div style="border-left:3px solid var(--cyan);padding:10px 14px;margin:8px 0;background:rgba(57,210,192,.03);border-radius:0 6px 6px 0">
+<strong><a href="https://github.com/ROCm/rocm-libraries/blob/b7de1e14/docs/hipblaslt-runtime-triage-checklist.md"><code>docs/hipblaslt-runtime-triage-checklist.md</code></a></strong> (score: <span style="color:var(--green);font-weight:700">11.0</span>)<br>
+<span style="font-size:11px">匹配: <code>segmentation fault</code>, <code>sigsegv</code></span>
+<div style="background:var(--bg-code);border-radius:4px;padding:6px 10px;margin:6px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">
+- **<mark style="background:rgba(63,185,80,.2);color:var(--green)">Segmentation Fault</mark> (<mark style="background:rgba(63,185,80,.2);color:var(--green)">SIGSEGV</mark>)** &nbsp; ```...
+</div>
+</div>
+
+<hr style="border-color:var(--border);margin:20px 0">
+
+<!-- Discussions Section -->
+<h4 style="color:var(--text-bright)">Discussions (0 个关键词命中 / 0 个总相关)</h4>
+<p style="font-size:12px;color:var(--text-dim);font-style:italic">未找到符合条件的 discussions。</p>
+
+<hr style="border-color:var(--border);margin:20px 0">
+
+<!-- Cross-Reference Section -->
+<h4 style="color:var(--text-bright)">交叉引用</h4>
+<p style="font-size:12px;color:var(--text-dim)">统计: <strong>33</strong> 条引用关系 (Issue↔PR: <strong>8</strong>, PR↔PR: <strong>25</strong>)</p>
+
+<p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin:12px 0 8px">Issue ↔ PR 关联 (fixes)</p>
+<table style="font-size:11px">
+<tr><th>Issue</th><th>关联 PR</th><th>关系</th><th>PR 状态</th></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/2072">#2072</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/2073">#2073</a></td><td><strong style="color:var(--red)">fixes</strong></td><td>🟢 open</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/288">#288</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/2073">#2073</a></td><td><strong style="color:var(--red)">fixes</strong></td><td>🟢 open</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/316">#316</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/2073">#2073</a></td><td><strong style="color:var(--red)">fixes</strong></td><td>🟢 open</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/1975">#1975</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/2797">#2797</a></td><td><strong style="color:var(--red)">fixes</strong></td><td>✅ merged</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/3563">#3563</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/3626">#3626</a></td><td><strong style="color:var(--red)">fixes</strong></td><td>✅ merged</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/issues/3686">#3686</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/3626">#3626</a></td><td><strong style="color:var(--red)">fixes</strong></td><td>✅ merged</td></tr>
+</table>
+
+<p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:16px 0 8px">PR → PR 关联 (refs, 25 条显示前 5 条)</p>
+<table style="font-size:11px">
+<tr><th>来源 PR</th><th>引用 PR</th><th>关系</th></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/pull/3411">#3411</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/2718">#2718</a></td><td style="color:var(--text-dim)">refs</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/pull/3416">#3416</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/2718">#2718</a></td><td style="color:var(--text-dim)">refs</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/pull/224">#224</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/123">#123</a></td><td style="color:var(--text-dim)">refs</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/pull/3788">#3788</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/3612">#3612</a></td><td style="color:var(--text-dim)">refs</td></tr>
+<tr><td><a href="https://github.com/ROCm/rocm-libraries/pull/3825">#3825</a></td><td><a href="https://github.com/ROCm/rocm-libraries/pull/2757">#2757</a></td><td style="color:var(--text-dim)">refs</td></tr>
+</table>
+<p style="font-size:11px;color:var(--text-dim);font-style:italic">... 另有 20 条 PR→PR 引用未显示 ...</p>
+
+<p style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin:16px 0 8px">交叉引用关系图（枢纽过滤，仅展示 ≥2 条连线的节点）</p>
+<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+<img src="cross_ref_graph.png" alt="交叉引用关系图" style="max-width:100%;border-radius:6px">
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:8px 0;padding:8px 12px;background:var(--bg-code);border-radius:6px;font-size:12px;color:var(--text-dim)">
+<span><strong>图例:</strong></span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:28px;border-top:2.5px solid #CF222E"></span> 粗红实线 = fixes / closes</span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:28px;border-top:1px dashed #8B949E"></span> 细灰虚线 = refs（仅引用）</span>
+</div>
+
+<hr style="border-color:var(--border);margin:20px 0">
+<p style="font-size:11px;color:var(--text-dim);text-align:center;font-style:italic">Generated by search_github.py v6</p>
+
+</div>
+</details>
+
+<h3>JSON 输出结构 (<code>--json</code>)</h3>
+<p>使用 <code>--json</code> 参数时，输出包含全部搜索类型的结构化数据，适合程序化处理：</p>
+<pre><code>{
+  <span class="str">"meta"</span>: {
+    <span class="str">"repo"</span>: <span class="str">"ROCm/rocm-libraries"</span>,
+    <span class="str">"component"</span>: <span class="str">"hipblaslt"</span>,
+    <span class="str">"topic"</span>: <span class="str">"page fault"</span>,
+    <span class="str">"search_types"</span>: [<span class="str">"issues"</span>, <span class="str">"prs"</span>, <span class="str">"code"</span>],
+    <span class="str">"generated_at"</span>: <span class="str">"2026-02-06T12:00:00Z"</span>
+  },
+  <span class="str">"issues"</span>: [
+    {<span class="str">"number"</span>: <span class="num">1132</span>, <span class="str">"title"</span>: <span class="str">"Strix Halo / gfx1151 results in GPU hangs..."</span>, <span class="str">"score"</span>: <span class="num">23.9</span>,
+     <span class="str">"state"</span>: <span class="str">"closed"</span>, <span class="str">"matched_keywords"</span>: [<span class="str">"page fault"</span>, <span class="str">"gfxhub"</span>], <span class="str">"url"</span>: <span class="str">"..."</span>}
+  ],
+  <span class="str">"prs"</span>: [
+    {<span class="str">"number"</span>: <span class="num">3734</span>, <span class="str">"title"</span>: <span class="str">"[hipblaslt] Fix segmentation fault..."</span>, <span class="str">"score"</span>: <span class="num">13.0</span>,
+     <span class="str">"merged"</span>: <span class="kw">false</span>, <span class="str">"changed_files"</span>: [...]}
+  ],
+  <span class="str">"code"</span>: [
+    {<span class="str">"path"</span>: <span class="str">"src/hipblaslt/fault_handler.cpp"</span>, <span class="str">"score"</span>: <span class="num">12.0</span>,
+     <span class="str">"snippet"</span>: <span class="str">"..."</span>}
+  ],
+  <span class="str">"commits"</span>: [],
+  <span class="str">"discussions"</span>: []
+}</code></pre>
+<p style="font-size:13px;color:var(--text-dim)">未搜索的类型会输出空数组。每种类型的结果按分数降序排列。</p>
+
+<h3>控制报告详细程度</h3>
+<table>
+<tr><th>参数</th><th>效果</th></tr>
+<tr><td><code>--max-component 5</code></td><td>每种类型的"仅组件匹配"最多显示 5 条（减少报告长度）</td></tr>
+<tr><td><code>--max-component 0</code></td><td>完全隐藏"仅组件匹配"部分</td></tr>
+<tr><td><code>--max-component 999</code></td><td>显示所有组件匹配结果（不推荐，报告可能很长）</td></tr>
+<tr><td><code>--min-score 5.0</code></td><td>提高最低分数阈值，减少低相关性结果</td></tr>
+</table>
+</section>
+
+<!-- ==================== PERFORMANCE ==================== -->
+<section id="performance">
+<h2>性能特征</h2>
+<p>执行时间主要取决于 GitHub API 速率限制与网络延迟。以下数据基于 hipblaslt page fault 搜索场景实测：</p>
+<table>
+<tr><th>场景</th><th>API 调用</th><th>有 Token</th><th>无 Token</th><th>说明</th></tr>
+<tr><td>基础搜索 (3 查询)</td><td>3</td><td class="perf-fast">~10 秒</td><td class="perf-mid">~20 秒</td><td>快速验证关键词是否有效</td></tr>
+<tr><td>完整搜索 (13 查询)</td><td>13</td><td class="perf-fast">~30 秒</td><td class="perf-slow">~2 分钟</td><td>推荐的标准搜索</td></tr>
+<tr><td>+Comments (本例 42 个 borderline)</td><td>13 + 42</td><td class="perf-mid">~1.5 分钟</td><td class="perf-slow">不推荐</td><td>推荐配置 Token；auto: 有 Token 时 4 线程，无 Token 时单线程</td></tr>
+<tr><td>多类型串行 (issues + prs + code)</td><td>13&times;3</td><td class="perf-mid">~1.5 分钟</td><td class="perf-slow">~5 分钟</td><td>v5 默认模式，各类型按顺序执行</td></tr>
+<tr><td style="color:var(--green);font-weight:600">多类型并行 (v6 默认)</td><td>13&times;3</td><td class="perf-fast" style="font-weight:700">~30 秒</td><td class="perf-mid">~2 分钟</td><td>搜索器并行执行，总耗时 &asymp; 最慢单类型</td></tr>
+<tr><td style="color:var(--green);font-weight:600">全类型并行 (v6)</td><td>13&times;5</td><td class="perf-fast" style="font-weight:700">~45 秒</td><td class="perf-slow">不推荐</td><td>5 搜索器并行，Discussions (GraphQL) 需要 Token</td></tr>
+<tr><td>增量搜索 (+2 新查询)</td><td>2 (Search) + 2 (Comments)</td><td class="perf-fast">~10 秒</td><td class="perf-fast">~15 秒</td><td>全类型缓存，已收集结果不重复拉取</td></tr>
+<tr><td>Smart 二轮补搜</td><td>缓存恢复 + 新查询</td><td class="perf-fast">~15 秒</td><td class="perf-fast">~20 秒</td><td><code>--resume --append-queries</code>，缓存中已有结果不重新拉取</td></tr>
+<tr><td>Dry-Run</td><td>0</td><td class="perf-fast">瞬间</td><td class="perf-fast">瞬间</td><td>不消耗 API 配额</td></tr>
+</table>
+
+<div class="card" style="margin-top:16px">
+<h4 style="margin-top:0">v6 并行模式性能对比</h4>
+<p style="font-size:13px">以 Issues + PRs + Code 三类型搜索 (13 查询/类) 为例：</p>
+<table style="font-size:13px;margin:0">
+<tr><th>模式</th><th>有 Token 耗时</th><th>加速比</th></tr>
+<tr><td>v5 串行</td><td>~90 秒</td><td>1.0x (基准)</td></tr>
+<tr><td>v6 并行 (默认)</td><td style="color:var(--green);font-weight:700">~30 秒</td><td style="color:var(--green);font-weight:700">~3x</td></tr>
+<tr><td>v6 并行 + Smart 二轮</td><td>~45 秒</td><td>~2x (含 AI 审阅等待)</td></tr>
+</table>
+</div>
+
+<h3>速率限制</h3>
+<div class="card-row">
+<div class="card">
+<h4 style="margin-top:0">无 Token</h4>
+<table style="font-size:13px;margin:0">
+<tr><td>Search API</td><td>10 次/分钟</td></tr>
+<tr><td>REST API</td><td>60 次/小时</td></tr>
+</table>
+<p style="font-size:12px;color:var(--red);margin:8px 0 0">Comments 搜索基本不可用</p>
+</div>
+<div class="card">
+<h4 style="margin-top:0">有 Token (免费)</h4>
+<table style="font-size:13px;margin:0">
+<tr><td>Search API</td><td>30 次/分钟</td></tr>
+<tr><td>REST API</td><td>5000 次/小时</td></tr>
+</table>
+<p style="font-size:12px;color:var(--green);margin:8px 0 0">生成: <a href="https://github.com/settings/tokens">github.com/settings/tokens</a>，无需勾选任何权限</p>
+</div>
+</div>
+
+<h3>内存与 body 截断</h3>
+<p>部分 Issue body 极长（如内嵌完整编译日志或 core dump），会拖慢子串匹配并占用大量内存。收集阶段将 body 截断为 <strong>50,000 字符</strong>（约 25 页），此上限远超多数 Issue 的实际长度。</p>
+</section>
+
+<!-- ==================== CALCULATOR ==================== -->
+<section id="calculator">
+<h2>评分计算器</h2>
+<p>输入匹配场景，实时计算 Issue 预估得分。</p>
+<div class="card">
+<div class="cg">
+<div>
+<div class="ci"><label>组件匹配</label><select id="cc"><option value="none">不限组件</option><option value="body">title+body (+2)</option><option value="label">label (+3)</option><option value="both" selected>title+body+label (+5)</option></select></div>
+<div class="ci" style="margin-top:12px"><label>高权重词命中 (每个 +5)</label><input type="number" id="ch" value="2" min="0" max="20"></div>
+<div class="ci" style="margin-top:12px"><label>中权重词命中 (每个 +3)</label><input type="number" id="cm" value="1" min="0" max="20"></div>
+<div class="ci" style="margin-top:12px"><label>低权重词命中 (每个 +1)</label><input type="number" id="cl" value="0" min="0" max="20"></div>
+</div>
+<div>
+<div class="ci"><label>标题中命中数 (每个 +2)</label><input type="number" id="ct" value="1" min="0" max="10"></div>
+<div class="ci" style="margin-top:12px"><label>评论独有词数 (x0.8)</label><input type="number" id="ck" value="0" min="0" max="10"></div>
+<div class="ci" style="margin-top:12px"><label>评论词平均权重</label><select id="cw"><option value="5">高 (5)</option><option value="3" selected>中 (3)</option><option value="1">低 (1)</option></select></div>
+<div class="ci" style="margin-top:12px"><label>频率加分 (多次出现的词数)</label><input type="number" id="cf" value="0" min="0" max="10"></div>
+</div>
+</div>
+<div class="cr">
+<div>预计得分</div>
+<div class="sc high" id="cs">17.0</div>
+<div id="cv" style="font-size:14px;color:var(--green)">高度相关</div>
+<div class="cbd" id="cb"></div>
+</div>
+</div>
+</section>
+
+<!-- ==================== TEXT SIMULATOR ==================== -->
+<section id="simulator">
+<h2>文本评分模拟器</h2>
+<p>粘贴 Issue 文本并输入关键词，实时模拟评分引擎的匹配过程。</p>
+<div class="card">
+<div class="ci"><label>Issue 标题</label><input type="text" id="sim-title" placeholder="例: Memory access fault by GPU node-2 (Agent handle: 0x3596e2c0)..." value="Memory access fault by GPU node-2 (Agent handle: 0x3596e2c0). Write access to a read-only page."></div>
+<div class="ci" style="margin-top:12px"><label>Issue Body (粘贴文本)</label><textarea id="sim-body" rows="4" placeholder="粘贴 issue body 内容...">After building hipBLASLt library: Memory access fault by GPU node-2 (Agent handle: 0x3596e2c0) on address 0x7f9de440f000.</textarea></div>
+<div style="margin-top:12px">
+<div class="ci"><label>高权重词 (逗号分隔)</label><input type="text" id="sim-kw-h" value="page fault, memory access fault, illegal memory access, segmentation fault, protection fault"></div>
+<div class="ci" style="margin-top:8px"><label>中权重词 (逗号分隔)</label><input type="text" id="sim-kw-m" value="sigsegv, segfault, read-only page, gpu hang, gpu reset"></div>
+<div class="ci" style="margin-top:8px"><label>低权重词 (逗号分隔)</label><input type="text" id="sim-kw-l" value="write access to a read-only, gpu node, agent handle, abort, core dump"></div>
+</div>
+<div class="ci" style="margin-top:12px"><label>组件 (留空 = 不限)</label><input type="text" id="sim-comp" value="hipblaslt"></div>
+<div class="ci" style="margin-top:12px"><label>Labels (逗号分隔)</label><input type="text" id="sim-labels" value="project: hipblaslt"></div>
+<button onclick="runSimulator()" style="margin-top:16px;padding:10px 24px;background:var(--accent-dim);color:#fff;border:2px solid var(--accent);border-radius:var(--radius);cursor:pointer;font-family:var(--font-mono);font-size:14px;font-weight:600">运行模拟评分</button>
+
+<div class="sim-result" id="sim-result">
+<div class="cr" style="margin-top:16px">
+<div>模拟得分</div>
+<div class="sc high" id="sim-score">0</div>
+<div id="sim-verdict"></div>
+</div>
+<h4 style="margin-top:16px">关键词匹配详情</h4>
+<div id="sim-detail" style="font-family:var(--font-mono);font-size:13px;line-height:2"></div>
+<h4 style="margin-top:12px">关键词命中状态</h4>
+<div id="sim-tags" style="margin-top:8px"></div>
+</div>
+</div>
+</section>
+
+<!-- ==================== TROUBLESHOOTING ==================== -->
+<section id="troubleshooting">
+<h2>故障排除</h2>
+<details><summary>触发 Search API 速率限制 (HTTP 403)</summary><div class="db"><p>原因：未设置 <code>GITHUB_TOKEN</code> 环境变量，匿名请求的速率上限仅 10 次/分钟。可免费生成 Token：<a href="https://github.com/settings/tokens">github.com/settings/tokens</a>，无需勾选任何权限 (scope)。详见 <a href="token-tutorial/">Token 申请教程</a>。</p>
+<pre><code><span class="cmt"># PowerShell</span>
+$env:GITHUB_TOKEN = "ghp_xxx"
+<span class="cmt"># Linux</span>
+export GITHUB_TOKEN=ghp_xxx</code></pre></div></details>
+<details><summary>查询匹配超过 1000 条</summary><div class="db"><p>GitHub Search API 单次查询上限 1,000 条（平台硬限制，无法绕过）。解决方法：通过 <code>--state</code>、<code>--date-from</code>/<code>--date-to</code> 缩小范围，或使用更精确的搜索词减少命中量。</p></div></details>
+<details><summary>日期格式错误</summary><div class="db"><p>日期格式限定 <code>YYYY-MM-DD</code>（ISO 8601），不接受 <code>2024/01/01</code> 等其他格式。脚本启动时校验，格式错误即报错。</p></div></details>
+<details><summary>缓存加载失败</summary><div class="db"><p>使用原子写入（先写临时文件再 rename）+ 多类型分段存储 + <code>threading.Lock</code> 保护并行写入。如缓存损坏，删除 <code>.cache.json</code> 重新搜索。跨大版本升级后缓存格式可能不兼容，需删除旧缓存文件重建。</p></div></details>
+<details><summary>ConnectionError / 网络超时</summary><div class="db"><p>脚本内置指数退避重试（最多 3 次），覆盖 <code>ConnectionError</code> 与 HTTP 5xx。若持续失败，请检查网络连接、DNS 或代理配置。</p></div></details>
+<details><summary>评分为 0 或远低于预期</summary><div class="db"><p>常见原因：(1) 关键词覆盖不足，Issue 中使用了未收录的术语变体；(2) 组件名拼写不匹配（匹配不区分大小写，但组件名须完整出现）。建议用 <code>--dry-run</code> 检查关键词与查询列表，参考 <code>reference.md</code> 的 6 维展开方法补充同义词。</p></div></details>
+</section>
+
+<!-- ==================== CHANGELOG ==================== -->
+<section id="changelog">
+<h2>Changelog</h2>
+<h3>v6.1 (当前)</h3>
+<ul>
+<li><strong>查询自动构建:</strong> 新增 <code>core/query_builder.py</code>，AI 只需提供关键词，查询由代码按 5 轮策略自动生成（R1 高权独立 → R2 高权 OR 对 → R3 中权配对 → R4 跨层组合 → R5 低权分组）。config 中 <code>queries</code> 字段变为可选。按预期产出降序排列，配合早停机制最大化效率</li>
+<li><strong>种子同义词库:</strong> 新增 <code>data/seed_synonyms.json</code>（12 个通用主题、~150 个关键词），根据 <code>topic</code> 子串匹配自动合并到配置关键词中，为 AI 同义词扩展提供基线兜底。实测 page fault 场景从 5 个关键词扩展至 19 个</li>
+<li><strong>测试:</strong> 新增 <code>test_query_builder.py</code>（20 tests，覆盖查询构建 + 种子合并 + 缓存失效）</li>
+</ul>
+<h3>v6</h3>
+<ul>
+<li><strong>并行搜索:</strong> 多类型搜索时搜索器通过 <code>ThreadPoolExecutor</code> 并行执行，总耗时 &asymp; 最慢单类型搜索。<code>--no-parallel</code> 可退回串行模式。缓存写入受 <code>threading.Lock</code> 保护</li>
+<li><strong>Smart AI 层:</strong> 三个新参数实现 AI-in-the-loop：<code>--intermediate-json</code> 输出中间结果供 AI 审阅，<code>--score-overrides</code> 接受 AI 评分覆盖，<code>--append-queries</code> 支持二轮补搜。整体工作流从 5 阶段扩展为 7 阶段</li>
+<li><strong>交叉引用引擎:</strong> 新增 <code>core/cross_ref.py</code>，检测 5 类关联（Issue↔PR、PR↔PR、Commit→PR/Issue），用户请求 ≥2 种可关联类型时自动触发。自动生成枢纽过滤关系图（PNG），仅展示 ≥2 条连线的节点，智能三列布局确保 PR→PR 箭头跨列可见</li>
+<li><strong>部分关键词匹配:</strong> ≥3 词关键词支持前 N-1 词部分匹配（权重 ×0.6），防止因关键词过长而漏报</li>
+<li><strong>结构化日志:</strong> 全部模块从 <code>print()</code> 迁移至 Python <code>logging</code>（<code>gss.*</code> 层级）。<code>--verbose</code> 输出 DEBUG，<code>--quiet</code> 仅输出 WARNING+。用户可见的报告输出 (<code>print</code>) 和内部状态日志 (<code>logging</code>) 分离</li>
+<li><strong>搜索器单元测试:</strong> 新增 <code>test_searchers.py</code>（13 tests，覆盖全部 5 种搜索器的解析、去重、查询构建）+ <code>test_cross_ref.py</code>（8 tests，覆盖关联提取与格式化）</li>
+<li><strong>测试总量:</strong> 10 个测试模块、<strong>141 个用例</strong>全部通过</li>
+</ul>
+<h3>v5</h3>
+<ul>
+<li><strong>多类型搜索:</strong> 新增 Pull Requests、Code、Commits、Discussions 四种内容类型；通过 <code>--search-types</code> 参数或配置文件 <code>search_types</code> 字段指定</li>
+<li><strong>模块化架构:</strong> 拆分为 <code>core/</code>（核心引擎）+ <code>searchers/</code>（搜索器插件），每种类型对应独立插件；入口 <code>search_github.py</code> 通过注册表模式统一调度</li>
+<li><strong>GraphQL 统一 API:</strong> Discussion 搜索经 <code>api_client.graphql()</code> 实现，与 REST 共享重试、退避、限流逻辑</li>
+<li><strong>类型特有评分:</strong> PR 合并 (+2.0) + 关联 Issue (+1.5) + 文件路径 (+1.5)、Code 组件路径 (+3.0) + 关键词路径 (+1.0/词)、Commit 首行摘要 (+1.5)、Discussion 采纳答案 (+1.0/词)</li>
+<li><strong>全类型报告:</strong> 统一 Markdown 报告（执行摘要 + 关键词/组件分离展示）+ <code>--json</code> 全类型 JSON 输出；<code>--max-component</code> 控制组件匹配显示上限</li>
+<li><strong>全类型缓存:</strong> <code>cache.py</code> 采用单文件多段存储，5 种类型均支持增量缓存与断点恢复</li>
+<li><strong>单元测试:</strong> 7 个测试模块、100 个用例</li>
+</ul>
+<h3>v4</h3>
+<ul><li>关键词包含去重 + 频率加分</li><li><code>exclude_issues</code> 排除列表</li><li>输出报告附带完整关键词列表与匹配详情</li><li><code>--dry-run</code> 预览模式</li><li>日期格式校验 (<code>validate()</code>)</li></ul>
+<h3>v3</h3>
+<ul><li>缓存 + 增量搜索 (原子写入)</li><li>并发评论获取 (ThreadPoolExecutor)</li><li>Snippet 来源标注 ([body]/[comments])</li><li>指数退避重试 + 重试上限</li><li>查询去重 + 关键词预计算</li><li>精确速率限制等待 (X-RateLimit-Reset)</li><li>Body 截断 50K 字符</li></ul>
+<h3>v2</h3>
+<ul><li>两阶段 comments 搜索</li><li>三层关键词权重</li><li>JSON 配置 + AI Skill</li><li>组件可选 (全仓库搜索)</li><li>状态 + 日期过滤 (API + 本地双层)</li></ul>
+<h3>v1</h3>
+<ul><li>基础多轮搜索 + 评分</li><li>Markdown 报告输出</li></ul>
+</section>
+
+</main>
+
+<!-- Back to top -->
+<button class="btt" id="bttBtn" aria-label="回到顶部">&uarr;</button>
+
+<script>
+/* ===== Tab switching ===== */
+document.querySelectorAll('.tab').forEach(function(t){
+t.addEventListener('click',function(){
+var g=t.parentElement;
+g.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
+t.classList.add('active');
+var n=g.nextElementSibling;
+while(n&&n.classList.contains('tc')){n.classList.remove('active');n=n.nextElementSibling}
+document.getElementById(t.dataset.tab).classList.add('active');
+});
+});
+
+/* ===== Active nav on scroll ===== */
+var secs=document.querySelectorAll('section[id]');
+var navs=document.querySelectorAll('nav a');
+window.addEventListener('scroll',function(){
+var c='';
+secs.forEach(function(s){if(window.scrollY>=s.offsetTop-80)c=s.id});
+navs.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+c)});
+/* Back to top */
+document.getElementById('bttBtn').classList.toggle('visible',window.scrollY>400);
+});
+
+/* ===== Back to top ===== */
+document.getElementById('bttBtn').addEventListener('click',function(){
+window.scrollTo({top:0,behavior:'smooth'});
+});
+
+/* ===== Mobile nav ===== */
+var menuBtn=document.getElementById('menuBtn');
+var sideNav=document.getElementById('sideNav');
+var overlay=document.getElementById('navOverlay');
+function toggleNav(){sideNav.classList.toggle('open');overlay.classList.toggle('open')}
+menuBtn.addEventListener('click',toggleNav);
+overlay.addEventListener('click',toggleNav);
+sideNav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){
+if(window.innerWidth<=900){toggleNav()}
+})});
+
+/* ===== Copy buttons ===== */
+document.querySelectorAll('pre').forEach(function(pre){
+var btn=document.createElement('button');
+btn.className='copy-btn';btn.textContent='Copy';
+btn.addEventListener('click',function(){
+var code=pre.querySelector('code');
+var text=code?code.textContent:pre.textContent;
+navigator.clipboard.writeText(text).then(function(){
+btn.textContent='Copied!';btn.classList.add('copied');
+setTimeout(function(){btn.textContent='Copy';btn.classList.remove('copied')},1500);
+});
+});
+pre.appendChild(btn);
+});
+
+/* ===== Calculator ===== */
+function uc(){
+var comp=document.getElementById('cc').value;
+var h=+document.getElementById('ch').value;
+var m=+document.getElementById('cm').value;
+var l=+document.getElementById('cl').value;
+var ti=+document.getElementById('ct').value;
+var co=+document.getElementById('ck').value;
+var cw=+document.getElementById('cw').value;
+var fr=+document.getElementById('cf').value;
+var s=0,bd=[];
+if(comp==='body'){s+=2;bd.push(['\u7EC4\u4EF6 (title+body)','+2.0'])}
+else if(comp==='label'){s+=3;bd.push(['\u7EC4\u4EF6 (label)','+3.0'])}
+else if(comp==='both'){s+=5;bd.push(['\u7EC4\u4EF6 (title+body+label)','+5.0'])}
+if(h>0){s+=h*5;bd.push(['\u9AD8\u6743\u91CD x'+h,'+'+h*5+'.0'])}
+if(m>0){s+=m*3;bd.push(['\u4E2D\u6743\u91CD x'+m,'+'+m*3+'.0'])}
+if(l>0){s+=l;bd.push(['\u4F4E\u6743\u91CD x'+l,'+'+l+'.0'])}
+if(ti>0){s+=ti*2;bd.push(['\u6807\u9898\u5339\u914D x'+ti,'+'+ti*2+'.0'])}
+if(fr>0){var fb=Math.min(fr*0.3,2.0);s+=fb;bd.push(['\u9891\u7387\u52A0\u5206 x'+fr,'+'+fb.toFixed(1)])}
+if(co>0){var cs=+(co*cw*0.8).toFixed(1);s+=cs;bd.push(['\u8BC4\u8BBA\u72EC\u6709 x'+co+' (x0.8)','+'+cs])}
+var se=document.getElementById('cs');
+var le=document.getElementById('cv');
+se.textContent=s.toFixed(1);
+se.className='sc '+(s>=8?'high':s>=5?'medium':'low');
+le.textContent=s>=8?'\u9AD8\u5EA6\u76F8\u5173':s>=5?'\u4E2D\u5EA6\u76F8\u5173':s>=3?'\u4F4E\u5EA6\u76F8\u5173':'\u4E0D\u8FBE\u6807';
+le.style.color=s>=8?'var(--green)':s>=5?'var(--orange)':'var(--red)';
+document.getElementById('cb').innerHTML=bd.map(function(i){
+return '<div><span>'+i[0]+'</span><span class="plus">'+i[1]+'</span></div>';
+}).join('');
+}
+document.querySelectorAll('#calculator input,#calculator select').forEach(function(e){
+e.addEventListener('input',uc);e.addEventListener('change',uc);
+});
+uc();
+
+/* ===== Text Scoring Simulator ===== */
+function parseKw(str){return str.split(',').map(function(s){return s.trim().toLowerCase()}).filter(function(s){return s.length>0})}
+function runSimulator(){
+var title=document.getElementById('sim-title').value;
+var body=document.getElementById('sim-body').value;
+var kwH=parseKw(document.getElementById('sim-kw-h').value);
+var kwM=parseKw(document.getElementById('sim-kw-m').value);
+var kwL=parseKw(document.getElementById('sim-kw-l').value);
+var comp=document.getElementById('sim-comp').value.trim().toLowerCase();
+var labels=document.getElementById('sim-labels').value.split(',').map(function(s){return s.trim().toLowerCase()});
+var text=(title+' '+body).toLowerCase();
+var titleLow=title.toLowerCase();
+var score=0;var details=[];var tags=[];
+
+/* Component */
+if(comp){
+if(text.indexOf(comp)!==-1){score+=2;details.push('\u7EC4\u4EF6 (title+body) \u547D\u4E2D: +2.0')}
+if(labels.some(function(l){return l.indexOf(comp)!==-1})){score+=3;details.push('\u7EC4\u4EF6 (label) \u547D\u4E2D: +3.0')}
+}
+
+/* All keywords with weights */
+var allKw=[];
+kwH.forEach(function(k){allKw.push({kw:k,w:5})});
+kwM.forEach(function(k){allKw.push({kw:k,w:3})});
+kwL.forEach(function(k){allKw.push({kw:k,w:1})});
+allKw.sort(function(a,b){return b.kw.length-a.kw.length});
+
+/* Build suppressed set */
+var suppressed=new Set();
+for(var i=0;i<allKw.length;i++){
+for(var j=i+1;j<allKw.length;j++){
+if(allKw[j].kw!==allKw[i].kw&&allKw[i].kw.indexOf(allKw[j].kw)!==-1){
+suppressed.add(allKw[j].kw)}}}
+
+var matched=new Set();
+var longMatched=new Set();
+allKw.forEach(function(item){
+var kw=item.kw,w=item.w;
+var inText=text.indexOf(kw)!==-1;
+var inTitle=titleLow.indexOf(kw)!==-1;
+if(inText||inTitle){
+if(suppressed.has(kw)){
+var covered=false;
+longMatched.forEach(function(lm){if(lm.indexOf(kw)!==-1)covered=true});
+if(covered){tags.push({kw:kw,hit:false,note:'\u88AB\u957F\u8BCD\u5305\u542B\uFF0C\u8DF3\u8FC7'});return}
+}
+matched.add(kw);longMatched.add(kw);
+var add=w;var msg='"'+kw+'" (+'+(w===5?'5 \u9AD8':w===3?'3 \u4E2D':'1 \u4F4E')+')';
+if(inTitle){add+=2;msg+=' + \u6807\u9898 +2.0'}
+/* freq */
+var idx=0,cnt=0;while((idx=text.indexOf(kw,idx))!==-1){cnt++;idx+=kw.length}
+if(cnt>1){var fb=Math.min((cnt-1)*0.3,2.0);add+=fb;msg+=' + \u9891\u7387x'+cnt+' +'+fb.toFixed(1)}
+score+=add;
+details.push(msg+' = +'+add.toFixed(1));
+tags.push({kw:kw,hit:true,note:'+'+(add).toFixed(1)});
+}else{
+tags.push({kw:kw,hit:false,note:'\u672A\u547D\u4E2D'});
+}
+});
+
+/* Display */
+document.getElementById('sim-result').classList.add('visible');
+var se=document.getElementById('sim-score');
+se.textContent=score.toFixed(1);
+se.className='sc '+(score>=8?'high':score>=5?'medium':'low');
+var ve=document.getElementById('sim-verdict');
+ve.textContent=score>=8?'\u9AD8\u5EA6\u76F8\u5173':score>=5?'\u4E2D\u5EA6\u76F8\u5173':score>=3?'\u4F4E\u5EA6\u76F8\u5173':'\u4E0D\u8FBE\u6807';
+ve.style.color=score>=8?'var(--green)':score>=5?'var(--orange)':'var(--red)';
+document.getElementById('sim-detail').innerHTML=details.map(function(d){return '<div>'+d+'</div>'}).join('');
+document.getElementById('sim-tags').innerHTML=tags.map(function(t){
+return '<span class="sim-kw-tag '+(t.hit?'hit':'miss')+'">'+t.kw+' <span style="font-size:10px;opacity:.7">'+t.note+'</span></span>';
+}).join('');
+}
+</script>
+</body>
+</html>

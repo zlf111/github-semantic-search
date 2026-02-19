@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "description": "种子同义词库 — 为 AI 关键词扩展提供基线补充。触发词采用子串匹配：若 config.topic 包含某 trigger，即合并该主题的关键词。",
+  "topics": [
+    {
+      "id": "memory_fault",
+      "triggers": [
+        "page fault", "pagefault", "memory fault", "memory access fault",
+        "segfault", "segmentation fault", "illegal memory", "illegal access",
+        "protection fault", "bus error"
+      ],
+      "high": [
+        "page fault", "segmentation fault",
+        "memory access fault", "illegal memory access"
+      ],
+      "medium": [
+        "sigsegv", "sigbus", "segfault",
+        "signal 11", "signal 7", "bus error",
+        "page not present", "read-only page"
+      ],
+      "low": [
+        "core dump", "coredump", "protection_fault",
+        "page table", "mmu fault", "gpu fault"
+      ]
+    },
+    {
+      "id": "oom",
+      "triggers": [
+        "out of memory", "oom", "memory exhaust",
+        "allocation fail", "bad_alloc", "cannot allocate"
+      ],
+      "high": [
+        "out of memory", "OOM", "memory exhausted"
+      ],
+      "medium": [
+        "allocation failure", "bad_alloc", "malloc failed",
+        "memory limit exceeded", "cannot allocate memory"
+      ],
+      "low": [
+        "memory pressure", "oom killer", "overcommit",
+        "heap exhausted", "device memory"
+      ]
+    },
+    {
+      "id": "memory_leak",
+      "triggers": [
+        "memory leak", "memleak", "address sanitizer",
+        "asan", "valgrind", "lsan"
+      ],
+      "high": [
+        "memory leak", "address sanitizer", "asan"
+      ],
+      "medium": [
+        "leak detected", "valgrind", "memory growth",
+        "unreleased memory", "lsan"
+      ],
+      "low": [
+        "heap growth", "rss growth", "msan",
+        "tsan", "sanitizer"
+      ]
+    },
+    {
+      "id": "crash",
+      "triggers": [
+        "crash", "core dump", "coredump",
+        "abort", "abnormal terminat"
+      ],
+      "high": [
+        "crash", "abort", "core dump"
+      ],
+      "medium": [
+        "sigabrt", "signal 6", "unhandled exception",
+        "fatal error", "segfault"
+      ],
+      "low": [
+        "assert failure", "process killed",
+        "oom killer", "abnormal exit"
+      ]
+    },
+    {
+      "id": "hang_deadlock",
+      "triggers": [
+        "hang", "deadlock", "timeout",
+        "freeze", "stuck", "unresponsive"
+      ],
+      "high": [
+        "hang", "deadlock", "timeout"
+      ],
+      "medium": [
+        "freeze", "stuck", "unresponsive",
+        "infinite loop", "not responding"
+      ],
+      "low": [
+        "livelock", "spinlock", "resource starvation",
+        "watchdog", "busy wait"
+      ]
+    },
+    {
+      "id": "build_error",
+      "triggers": [
+        "build fail", "build error", "compile error",
+        "compilation error", "cmake error", "link error",
+        "linker error", "undefined reference"
+      ],
+      "high": [
+        "build failure", "build error",
+        "compilation error", "compile error"
+      ],
+      "medium": [
+        "linker error", "undefined reference",
+        "undefined symbol", "missing dependency",
+        "header not found"
+      ],
+      "low": [
+        "cmake", "find_package", "ld: error",
+        "hipcc error", "clang error"
+      ]
+    },
+    {
+      "id": "performance",
+      "triggers": [
+        "performance regression", "perf regression",
+        "performance degradation", "slowdown",
+        "performance drop", "slow performance",
+        "throughput drop", "latency increase"
+      ],
+      "high": [
+        "performance regression", "performance degradation",
+        "slowdown", "performance drop"
+      ],
+      "medium": [
+        "throughput drop", "latency increase",
+        "benchmark regression", "perf drop",
+        "slower than"
+      ],
+      "low": [
+        "bottleneck", "cache miss", "profiling",
+        "occupancy", "stall"
+      ]
+    },
+    {
+      "id": "race_condition",
+      "triggers": [
+        "race condition", "data race", "thread safe",
+        "concurrency bug", "tsan"
+      ],
+      "high": [
+        "race condition", "data race", "thread safety"
+      ],
+      "medium": [
+        "tsan", "concurrent access",
+        "use after free", "double free"
+      ],
+      "low": [
+        "atomicity", "lock ordering",
+        "mutex", "synchronization"
+      ]
+    },
+    {
+      "id": "gpu_error",
+      "triggers": [
+        "gpu hang", "gpu reset", "gpu fault",
+        "amdgpu error", "gpu error", "device lost",
+        "gpu timeout"
+      ],
+      "high": [
+        "gpu hang", "gpu reset", "gpu fault"
+      ],
+      "medium": [
+        "device lost", "amdgpu error",
+        "gpu timeout", "ecc error",
+        "gpu recovery"
+      ],
+      "low": [
+        "vram", "ring buffer error",
+        "firmware error", "compute unit"
+      ]
+    },
+    {
+      "id": "hip_cuda_error",
+      "triggers": [
+        "hip error", "hiperror", "cuda error",
+        "cudaerror", "hip runtime", "cuda runtime",
+        "hipErrorIllegalAddress"
+      ],
+      "high": [
+        "HIP error", "HIP runtime error",
+        "hipErrorIllegalAddress"
+      ],
+      "medium": [
+        "hipMalloc failed", "hipMemcpy failed",
+        "kernel launch failed", "invalid device"
+      ],
+      "low": [
+        "hip api", "device synchronize",
+        "stream error", "hipGetLastError"
+      ]
+    },
+    {
+      "id": "test_failure",
+      "triggers": [
+        "test fail", "test failure", "ci fail",
+        "flaky test", "test regression"
+      ],
+      "high": [
+        "test failure", "test failed", "CI failure"
+      ],
+      "medium": [
+        "flaky test", "test timeout",
+        "assertion error", "test regression"
+      ],
+      "low": [
+        "pipeline failure", "pytest error",
+        "gtest", "ctest"
+      ]
+    },
+    {
+      "id": "compatibility",
+      "triggers": [
+        "incompatible", "compatibility issue",
+        "breaking change", "version mismatch",
+        "deprecated"
+      ],
+      "high": [
+        "incompatible", "breaking change",
+        "version mismatch"
+      ],
+      "medium": [
+        "deprecated", "backward compatibility",
+        "API change", "ABI break"
+      ],
+      "low": [
+        "migration", "upgrade path",
+        "API break", "version conflict"
+      ]
+    }
+  ]
+}
